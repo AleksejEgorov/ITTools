@@ -2793,3 +2793,66 @@ function Import-Excel {
         return $Result
     }
 }
+
+
+##############################################################
+####                   Update script version              ####
+##############################################################
+function Update-ScriptVersion {
+    param (
+        # Path to updatind files
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias("FullName")]
+        [string[]]$Path,
+
+        [Parameter()]
+        [switch]$Major,
+        
+        [Parameter()]
+        [switch]$Minor,
+
+        [Parameter()]
+        [switch]$Build
+    )
+
+    begin {}
+
+    process {
+        foreach ($File in $Path) {
+            $FileItem = Get-Item $File
+            $CurrentVersion = $null
+            try {
+                $CurrentVersion = (Test-ScriptFileInfo -Path $FileItem.FullName -ErrorAction Stop).Version
+            }
+            catch {
+                Write-Warning "$FileItem has no version info!"
+            }
+            if ($CurrentVersion) {
+                $RevisionVer = $CurrentVersion.Revision + 1
+                if ($Build) {
+                    $BuildVer = $CurrentVersion.Build + 1
+                }
+                if ($Minor) {
+                    $MinorVer = $CurrentVersion.Minor + 1
+                }
+                if ($Major) {
+                    $MajorVer = $CurrentVersion.Major + 1
+                }
+
+                $NewVersion = [System.Version]::new(
+                    $MajorVer,
+                    $MinorVer,
+                    $BuildVer,
+                    $RevisionVer
+                )
+                Update-ScriptFileInfo -Path $FileItem.FullName -Version $NewVersion -Force                
+            }            
+        }
+    }
+    end {}
+}
