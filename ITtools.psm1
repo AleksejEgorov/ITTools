@@ -2856,3 +2856,78 @@ function Update-ScriptVersion {
     }
     end {}
 }
+
+
+function Update-ModuleVersion {
+    param (
+        # Path to updatind files
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias("FullName","Path")]
+        [string[]]$Module,
+
+        [Parameter()]
+        [switch]$Major,
+        
+        [Parameter()]
+        [switch]$Minor,
+
+        [Parameter()]
+        [switch]$Build
+    )
+
+    begin {}
+
+    process {
+        foreach ($File in $Module) {
+            try {
+                $ManifestPath = [System.IO.Path]::ChangeExtension((Get-Module $File -ErrorAction Stop).Path,'psd1')
+            }
+            catch {
+                $ManifestPath = [System.IO.Path]::ChangeExtension($File,'psd1')
+            }
+            
+            Write-Verbose $ManifestPath
+            $CurrentVersion = $null
+            try {
+                $CurrentVersion = (Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop).Version
+                Write-Verbose $CurrentVersion
+            }
+            catch {
+                Write-Warning "$FileItem has no version info!"
+            }
+            if ($CurrentVersion) {
+                [int]$RevisionVer = $CurrentVersion.Revision + 1
+                [int]$BuildVer = $CurrentVersion.Build
+                [int]$MinorVer = $CurrentVersion.Minor
+                [int]$MajorVer = $CurrentVersion.Major
+                if ($Build) {
+                    $BuildVer++
+                }
+                if ($Minor) {
+                    $BuildVer = 0
+                    $MinorVer++
+                }
+                if ($Major) {
+                    $BuildVer = 0
+                    $MinorVer = 0
+                    $MajorVer++
+                }
+
+                $NewVersion = [System.Version]::new(
+                    $MajorVer,
+                    $MinorVer,
+                    $BuildVer,
+                    $RevisionVer
+                )
+                Write-Verbose $NewVersion
+                Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion
+            }            
+        }
+    }
+    end {}
+}

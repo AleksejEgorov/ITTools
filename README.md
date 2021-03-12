@@ -37,3 +37,5 @@ List of functions:
 * Wait-Reboot
 * Write-CMLog
 * Write-Log
+* Update-ScriptVersion
+* Update-ModuleVersion
