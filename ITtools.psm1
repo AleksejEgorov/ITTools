@@ -2833,15 +2833,21 @@ function Update-ScriptVersion {
                 Write-Warning "$FileItem has no version info!"
             }
             if ($CurrentVersion) {
-                $RevisionVer = $CurrentVersion.Revision + 1
+                [int]$RevisionVer = $CurrentVersion.Revision + 1
+                [int]$BuildVer = $CurrentVersion.Build
+                [int]$MinorVer = $CurrentVersion.Minor
+                [int]$MajorVer = $CurrentVersion.Major
                 if ($Build) {
-                    $BuildVer = $CurrentVersion.Build + 1
+                    $BuildVer++
                 }
                 if ($Minor) {
-                    $MinorVer = $CurrentVersion.Minor + 1
+                    $BuildVer = 0
+                    $MinorVer++
                 }
                 if ($Major) {
-                    $MajorVer = $CurrentVersion.Major + 1
+                    $BuildVer = 0
+                    $MinorVer = 0
+                    $MajorVer++
                 }
 
                 $NewVersion = [System.Version]::new(
