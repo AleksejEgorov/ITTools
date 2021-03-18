@@ -2403,7 +2403,7 @@ function Write-CMLog {
     }
 
     if (!$Component) {
-        $Component = $MyInvocation.MyCommand.Path
+        $Component = [System.IO.Path]::GetFileName($($MyInvocation.ScriptName))
         if (!$Component) {
             $Component = "PSConsole"
         }    
