@@ -2392,9 +2392,7 @@ function Write-CMLog {
         [Parameter(
             Mandatory=$false
         )]
-        [String]$Source
-
-        
+        [String]$Source        
     )
 
     # Define record type
@@ -2423,7 +2421,19 @@ function Write-CMLog {
         "file=`"`">"
 
     # Write the line to the log file
-    Add-Content -Path $LogFilePath -Value $Content
+    [bool]$LogSuccess = $false
+    $AttemptsLeft = 10
+    while (!($LogSuccess -or $AttemptsLeft -eq 0)) {
+        try {
+            Add-Content -Path $LogFilePath -Value $Content -Encoding UTF8 -ErrorAction Stop
+            $LogSuccess = $true
+        }
+        catch {
+            $Error.RemoveAt(0)                
+            Start-Sleep -Milliseconds (Get-Random (10..99))
+        }
+        $AttemptsLeft--
+    }
 }
 
 
