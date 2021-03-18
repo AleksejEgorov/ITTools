@@ -2036,35 +2036,61 @@ function Get-IASLog {
 ##############################################################
 ####             Get parent organizational unit           ####
 ##############################################################
-function Get-ADParentOU {
+function Get-ADParent {
     [CmdletBinding()]
     param (
         # User or computer name
-        [Parameter(Mandatory = $true)]
-        [string]$Identity
-    )
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('DistinguishedName')]
+        [string]$Identity,
 
-    try {
-        $TargetADObject = Get-ADObject $Identity -ErrorAction Stop
-    }
-    catch {
+        # Properties of parent object
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string[]]$Properties = @('Name','description')
+    )
+    #Requires -Module ActiveDirectory
+
+    begin {
+        # Import ActiveDirectory if avaliable.
         try {
-            $TargetADObject = Get-ADUser $Identity -ErrorAction Stop
+            Import-Module ActiveDirectory
         }
         catch {
-            try {
-                $TargetADObject = Get-ADComputer $Identity -ErrorAction Stop            
-            }
-            catch {
-                break
-            }
+            throw "ActiveDirectory powershell module required. Install RSAT and try again"
         }
     }
-    
-
-    $ParentOUDN = ($TargetADObject | Select-Object @{n='Parent';e={([adsi]"LDAP://$($PSItem.DistinguishedName)").Parent}}).Parent.Replace('LDAP://','')
-    $Parent = Get-ADOrganizationalUnit -Identity $ParentOUDN -Properties Description
-    return $Parent
+    process {
+        foreach ($ObjectName in $Identity) {
+            try {
+                $TargetADObject = Get-ADObject $ObjectName -ErrorAction Stop
+            }
+            catch {
+                try {
+                    $TargetADObject = Get-ADUser $ObjectName -ErrorAction Stop
+                }
+                catch {
+                    try {
+                        $TargetADObject = Get-ADComputer $ObjectName -ErrorAction Stop            
+                    }
+                    catch {
+                        continue
+                    }
+                }
+            }
+            
+        
+            $ParentObjectDN = ([adsi]"LDAP://$TargetADObject").Parent.Replace('LDAP://','')
+            return (Get-ADObject -Identity $ParentObjectDN -Properties $Properties)
+        }
+    }
+    end {}   
 }
 
 
