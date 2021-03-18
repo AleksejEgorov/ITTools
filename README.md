@@ -7,7 +7,7 @@ List of functions:
 * Convert-StringToHex
 * ConvertTo-Encoding
 * Export-Excel
-* Get-ADParentOU
+* Get-ADParent
 * Get-ADSiteServer
 * Get-BPStagingQuota
 * Get-Hex
