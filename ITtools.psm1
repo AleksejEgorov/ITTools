@@ -2060,7 +2060,7 @@ function Get-ADParent {
     begin {
         # Import ActiveDirectory if avaliable.
         try {
-            Import-Module ActiveDirectory
+            Import-Module ActiveDirectory -ErrorAction Stop
         }
         catch {
             throw "ActiveDirectory powershell module required. Install RSAT and try again"
