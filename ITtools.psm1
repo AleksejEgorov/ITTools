@@ -2857,7 +2857,7 @@ function Update-ScriptVersion {
 
         [Parameter(
             Mandatory = $false,
-            Position = 0
+            Position = 1
         )]
         [string]$ReleaseNotes
     )
@@ -2932,7 +2932,7 @@ function Update-ModuleVersion {
 
         [Parameter(
             Mandatory = $false,
-            Position = 0
+            Position = 1
         )]
         [string]$ReleaseNotes
     )
