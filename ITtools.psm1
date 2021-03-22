@@ -2853,7 +2853,13 @@ function Update-ScriptVersion {
         [switch]$Minor,
 
         [Parameter()]
-        [switch]$Build
+        [switch]$Build,
+
+        [Parameter(
+            Mandatory = $false,
+            Position = 0
+        )]
+        [string]$ReleaseNotes
     )
 
     begin {}
@@ -2892,7 +2898,10 @@ function Update-ScriptVersion {
                     $BuildVer,
                     $RevisionVer
                 )
-                Update-ScriptFileInfo -Path $FileItem.FullName -Version $NewVersion -Force                
+                Update-ScriptFileInfo -Path $FileItem.FullName -Version $NewVersion -Force     
+                if ($ReleaseNotes) {
+                    Update-ScriptFileInfo -Path $FileItem.FullName -ReleaseNotes $ReleaseNotes                    
+                }           
             }            
         }
     }
@@ -2919,7 +2928,13 @@ function Update-ModuleVersion {
         [switch]$Minor,
 
         [Parameter()]
-        [switch]$Build
+        [switch]$Build,
+
+        [Parameter(
+            Mandatory = $false,
+            Position = 0
+        )]
+        [string]$ReleaseNotes
     )
 
     begin {}
@@ -2968,6 +2983,9 @@ function Update-ModuleVersion {
                 )
                 Write-Verbose $NewVersion
                 Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion
+                if ($ReleaseNotes) {
+                    Update-ModuleManifest -Path $ManifestPath -ReleaseNotes $ReleaseNotes                    
+                }  
             }            
         }
     }
