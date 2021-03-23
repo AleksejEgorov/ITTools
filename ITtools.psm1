@@ -2909,6 +2909,9 @@ function Update-ScriptVersion {
 }
 
 
+##############################################################
+####                   Update module version              ####
+##############################################################
 function Update-ModuleVersion {
     param (
         # Path to updatind files
@@ -2990,4 +2993,53 @@ function Update-ModuleVersion {
         }
     }
     end {}
+}
+
+
+
+##############################################################
+####      Connect to exchange server via powershell       ####
+##############################################################
+function Connect-ExchangeServer {
+    param (
+        # Exchange server FQDN.
+        [Parameter(
+            Mandatory = $false,
+            Position = 0
+        )]
+        [ParameterType]
+        $ExchangeServer
+    )
+
+    try {
+        if (!$ExchangeServer) {
+            $ExchangeServer = (
+                [string[]](
+                    ([adsisearcher]"(&(objectClass=group)(cn=Exchange servers))").FindOne().Properties.member | 
+                    ForEach-Object {
+                        $ExchSearcher = [adsisearcher]"(&(objectClass=computer)(distinguishedName=$_))"
+                        $ExchSearcher.PropertiesToLoad.Add('dNSHostName')
+                        $ExchSearcher.FindAll()
+                    }
+                ).Properties.dnshostname
+            )[0]
+    
+        }
+    }
+    catch {
+        throw "Cannot find Exchange server $($ExchangeServer) in this forest."
+    }
+
+    $DegrExSess = Get-PSSession | Where-Object {($ComputerName -eq $ExchangeServer) -and ($PSItem.State -ne "Opened")}
+    if ($DegrExSess) {
+        $DegrExSess | Remove-PSSession -Confirm:$false
+    }
+    $OpenedExSess = Get-PSSession | Where-Object {($PSItem.ComputerName -eq $ExchangeServer) -and ($PSItem.State -eq "Opened")}
+    if (!$OpenedExSess) {
+        $ExSess = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos
+    }
+    else {
+        $ExSess = $OpenedExSess
+    }
+    $null = Import-PSSession $ExSess -DisableNameChecking -AllowClobber        
 }
