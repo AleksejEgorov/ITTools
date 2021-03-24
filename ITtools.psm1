@@ -2898,11 +2898,28 @@ function Update-ScriptVersion {
                     $BuildVer,
                     $RevisionVer
                 )
-                Update-ScriptFileInfo -Path $FileItem.FullName -Version $NewVersion -Force     
-                if ($ReleaseNotes) {
-                    Update-ScriptFileInfo -Path $FileItem.FullName -ReleaseNotes $ReleaseNotes                    
-                }           
-            }            
+
+                # Update-ScriptFileInfo -Path $FileItem.FullName -Version $NewVersion -Force
+                $ScriptContent = Get-Content -Path $FileItem.FullName -Raw
+                $ScriptContent -match "^\s*<#PSScriptInfo\s*[\s\w\.\-\\\/\|\[\],@:;'`"<>=+_()*&^%$#]*#>\s*"
+                $InfoBlock = $Matches[0]
+
+                $UpdatedInfoBlock = $InfoBlock `
+                    -replace `
+                        "\.VERSION\s(\d{1,}\.){3}(\d{1,})`r`n",`
+                        ".VERSION $($NewVersion.ToString())`r`n" `
+                        -replace `
+                            "\.RELEASENOTES\s*[\s\w\.\-\\\/\|\[\],@:;'`"<>=+_()*&^%$#]*#>\s*<#",`
+                            ".RELEASENOTES`n$((Get-Date).ToString('dd.MM.yyyy HH:mm'))`n$ReleaseNotes`n`n#>`n`n<#"
+                   
+                
+                $ScriptContent -replace `
+                    "^\s*<#PSScriptInfo\s*[\s\w\.\-\\\/\|\[\],@:;'`"<>=+_()*&^%$#]*#>\s*",`
+                    $UpdatedInfoBlock | 
+                        Out-File $FileItem.FullName -Encoding utf8 -Force
+                
+            }
+      
         }
     }
     end {}
