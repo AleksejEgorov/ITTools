@@ -1097,28 +1097,32 @@ function New-Password {
         [ValidateRange(0,4)]
         [int]$Conditions = 4
     )
+        
+    $CharacterList = @()
+    $Symbols = '!@#$%^&*()-_=+<>'.ToCharArray()
     
-    Add-Type -AssemblyName System.Web
-    $RegExList = @(
-            "[A-Z]",
-            "[a-z]",
-            "[\d]",
-            "[@#\$%\^&\*\?!\+\-=<>\.,\|\\\/]"
-        )
+    $CharacterList += 65..90 | ForEach-Object {[char]$_}
+    $CharacterList += 97..122 | ForEach-Object {[char]$_}
+    $CharacterList += 0..9
+    $CharacterList += $Symbols
     
     do {
-        [int]$ConditionsMatched = 0
-        $Passwd = [System.Web.Security.Membership]::GeneratePassword($Length,$SpecChar)
-
-        foreach ($RegEx in $RegExList) {
-            if ($Passwd -match $RegEx) {
-                $ConditionsMatched++
-            }            
+        $Passwd = ""
+        # for ($i = 0; $i -lt $Length; $i++) {
+        #     $RandomIndex = [System.Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $CharacterList.Length)
+        #     $Passwd += $CharacterList[$RandomIndex]
+        # }
+        0..$Length | ForEach-Object {
+            $Passwd += $CharacterList | Get-Random 
         }
-    } 
-    while (
-        $ConditionsMatched -lt $Conditions
-    )
+
+        [int]$hasLowerChar = $Passwd -cmatch '[a-z]'
+        [int]$hasUpperChar = $Passwd -cmatch '[A-Z]'
+        [int]$hasDigit = $Passwd -match '[0-9]'
+        [int]$hasSymbol = $Passwd.IndexOfAny($Symbols) -ne -1
+
+    }
+    until (($hasLowerChar + $hasUpperChar + $hasDigit + $hasSymbol) -ge $Conditions)
 
     return $Passwd
 }
