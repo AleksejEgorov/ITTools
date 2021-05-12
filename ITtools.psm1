@@ -3064,3 +3064,158 @@ function Connect-ExchangeServer {
     }
     $null = Import-PSSession $ExSess -DisableNameChecking -AllowClobber        
 }
+
+
+
+##############################################################
+####    Search user in ActiveDirectory by displayname     ####
+##############################################################
+
+function Get-ADUserByName {
+    [CmdletBinding()]
+    param (
+        # User's human name.
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias("DisplayName")]
+        [string[]]$Name,
+
+         # Properties to load.
+         [Parameter(
+            Mandatory = $false,
+            Position = 1,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias("PropertiesToLoad")]
+        [string[]]$Properties = @(
+            'displayName',
+            'Description',
+            'EmailAddress',
+            'telephoneNumber',
+            'AccountExpirationDate',
+            'Enabled',
+            'Title',
+            'DepartMent',
+            'Company'
+        ),
+
+        # Search base DistinguishedName
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [string]$SearchBase = "$(([adsi]'').distinguishedName)",
+
+        
+        [switch]$Strict,
+
+        [switch]$ValidOnly
+    )
+    
+    begin {
+        $NameFilter = $null
+
+        if (!(Get-Module ActiveDirectory)) {
+            Import-Module ActiveDirectory
+        }
+    }
+    
+    process {
+        foreach ($Record in $Name) {
+            $RawName = $Record.Trim(' ') -replace "\s{2,}",' '
+            Write-Verbose "RAWNAME : $RawName"
+
+            switch -Regex ($RawName) {
+                # Фамилия Имя Отчество
+                "^([А-ЯЁ][а-яё]{1,}\s){2}([А-ЯЁ][а-яё]{1,})$" {
+                    $NameFilter = "(displayName -eq '$RawName')"
+                    Write-Verbose "PATTERN : Surname GivenName MiddleName"
+                    break  
+                }
+
+                # Фамилия И.О.
+                # Фамилия И. О.
+                "^[А-ЯЁ][а-яё]{1,}\s([А-ЯЁ]\.\s{0,}){2}$" {
+                    $RawNameParts = $RawName.Split(' .') | Where-Object {$PSItem}
+                    $NameFilter = "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])* $($RawNameParts[2])*')"
+                    Write-Verbose "PATTERN : Surname G.M."
+                    break  
+                }
+
+                # И.О.Фамилия 
+                # И. О. Фамилия
+                "^([А-ЯЁ]\.\s{0,}){2}[А-ЯЁ][а-яё]{1,}$" {
+                    $RawNameParts = $RawName.Split(' .') | Where-Object {$PSItem}
+                    $NameFilter = "(displayName -like '$($RawNameParts[2]) $($RawNameParts[0])* $($RawNameParts[1])*')"
+                    Write-Verbose "PATTERN : G.M. Surname"
+                    break  
+                }
+                    
+
+                # Имя Фамилия
+                # Фамилия Имя
+                "^[А-ЯЁ][а-яё]{1,}\s[А-ЯЁ][а-яё]{1,}$" {
+                    $RawNameParts = $RawName.Split(' ') | Where-Object {$PSItem}
+                    $NameFilter = "(" + 
+                        "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1]) *') -or " +
+                        "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0]) *')" +
+                    ")"
+                    Write-Verbose "PATTERN : GivenName Surname"
+                    break  
+                }
+
+                # И. Фамилия
+                # Фамилия И.
+                "^([А-ЯЁ]\.\s?[А-ЯЁ][а-яё]{1,})|([А-ЯЁ][а-яё]{1,}\s[А-ЯЁ]\.)$" {
+                    $RawNameParts = $RawName.Split(' .') | Where-Object {$PSItem}
+                    $NameFilter = "(" + 
+                        "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])*') -or " +
+                        "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0])*')" +
+                    ")"
+                    Write-Verbose "PATTERN : G. Surname"
+                    break  
+                }
+                default {
+                    Write-Verbose "PATTERN : Unknown"
+                    if (!$Strict) {
+                        Write-Warning "Cannot parse $Record correctly! Searching by displayName"
+                        $NameFilter = "(displayName -like '$RawName*')"                        
+                    }
+                    else {
+                        Write-Warning "Cannot parse $Record correctly!"
+                        return $null
+                    }    
+                }     
+            }
+
+            if (!$NameFilter) { 
+                continue                
+            }
+
+            Write-Verbose "FILTER  : $NameFilter"
+            $ADUsers = [Microsoft.ActiveDirectory.Management.ADUser[]](
+                Get-ADUser -Filter (
+                    "(objectClass -eq 'user') -and " + 
+                    $NameFilter
+                ) -Properties $Properties -SearchBase $SearchBase
+            )
+
+            if ($ValidOnly) {
+                return (
+                    $ADUsers | 
+                    Where-Object {
+                        ($PSItem.SamAccountName -match "^([a-zA-Z]{3}_)?([a-zA-Z]\.){2}[A-Z][a-z]{1,}$")
+                    }
+                )
+            }
+            else {
+                return $ADUsers
+            }
+        }
+    }
+    end {}
+}
