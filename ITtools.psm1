@@ -3067,10 +3067,10 @@ function Connect-ExchangeServer {
 
 
 
+
 ##############################################################
 ####    Search user in ActiveDirectory by displayname     ####
 ##############################################################
-
 function Get-ADUserByName {
     [CmdletBinding()]
     param (
