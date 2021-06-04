@@ -633,7 +633,6 @@ function Export-Excel {
 ####          Test user if member of specific group       ####
 ##############################################################
 function Test-GroupMembership {
-    #requires -Module ActiveDirectory
     [CmdletBinding()]
     param (
         # Target group
@@ -2059,7 +2058,6 @@ function Get-ADParent {
         )]
         [string[]]$Properties = @('Name','description')
     )
-    #Requires -Module ActiveDirectory
 
     begin {
         # Import ActiveDirectory if avaliable.
