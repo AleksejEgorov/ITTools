@@ -12,7 +12,7 @@
 RootModule = 'ITtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.10.0.35'
+ModuleVersion = '1.10.1.36'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -119,7 +119,8 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = '1.6.4.35 (11.08.2021): Get-ADUserByName: Search devided to "by specific attributes" & "by displayname"
+        ReleaseNotes = '1.10.1.36 (11.08.2021): Update-ModuleManifest: Now old release notes are keeped.
+1.10.0.35 (11.08.2021): Get-ADUserByName: Search devided to "by specific attributes" & "by displayname"
 Function Get-LoggedInUsers: Fixed work with multiple servers.'
 
         # Prerelease string of this module
