@@ -1394,7 +1394,7 @@ function Get-InventoryInfo {
 
             # Checking remote machine avaliabelty
             try {
-                $Tman=Get-WmiObject -Class Win32_ComputerSystem -Comp "$Tcomp"  -ErrorAction Stop | Select-Object -ExpandProperty Model
+                $Tman = Get-WmiObject -Class Win32_ComputerSystem -Comp "$Tcomp"  -ErrorAction Stop | Select-Object -ExpandProperty Model
             }
             catch {
                 $Tsum = New-Object -TypeName psobject | Select-Object @{n="HostName";e={"$Tcomp"}},`
@@ -3015,7 +3015,11 @@ function Update-ModuleVersion {
                 Write-Verbose $NewVersion
                 Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion
                 if ($ReleaseNotes) {
-                    Update-ModuleManifest -Path $ManifestPath -ReleaseNotes $ReleaseNotes                    
+                    $ReleaseNotesString = $NewVersion.ToString() + 
+                        (Get-Date -Format ' (dd.MM.yyyy): ') +
+                        "$ReleaseNotes`n" +
+                        (Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop).ReleaseNotes
+                    Update-ModuleManifest -Path $ManifestPath -ReleaseNotes $ReleaseNotesString
                 }  
             }            
         }
@@ -3117,6 +3121,7 @@ function Get-ADUserByName {
         )]
         [string]$SearchBase = "$(([adsi]'').distinguishedName)",
 
+        [switch]$ByDisplayName,
         
         [switch]$Strict,
 
@@ -3124,6 +3129,10 @@ function Get-ADUserByName {
     )
     
     begin {
+        $SurnameAttribute = 'Surname'
+        $GivennameAttribute = 'GivenName'
+        $MiddlenameAttribute = "MiddleName"
+
         $NameFilter = $null
 
         if (!(Get-Module ActiveDirectory)) {
@@ -3139,7 +3148,17 @@ function Get-ADUserByName {
             switch -Regex ($RawName) {
                 # Фамилия Имя Отчество
                 "^([А-ЯЁ][а-яё]{1,}\s){2}([А-ЯЁ][а-яё]{1,})$" {
-                    $NameFilter = "(displayName -eq '$RawName')"
+                    $RawNameParts = $RawName.Split(' ').Split('.') | Where-Object {$PSItem}
+                    if ($ByDisplayName) {
+                        $NameFilter = "(displayName -eq '$RawName')"
+                    }
+                    else {
+                        $NameFilter = "(" +    
+                            "($SurnameAttribute -eq '$($RawNameParts[0])') -and " +
+                            "($GivennameAttribute -eq '$($RawNameParts[1])') -and "+
+                            "($MiddlenameAttribute -eq '$($RawNameParts[2])')" +
+                        ")"
+                    }
                     Write-Verbose "PATTERN : Surname GivenName MiddleName"
                     break  
                 }
@@ -3147,8 +3166,17 @@ function Get-ADUserByName {
                 # Фамилия И.О.
                 # Фамилия И. О.
                 "^[А-ЯЁ][а-яё]{1,}\s([А-ЯЁ]\.\s{0,}){2}$" {
-                    $RawNameParts = $RawName.Split(' .') | Where-Object {$PSItem}
-                    $NameFilter = "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])* $($RawNameParts[2])*')"
+                    $RawNameParts = $RawName.Split(' ').Split('.')| Where-Object {$PSItem}
+                    if ($ByDisplayName) {
+                        $NameFilter = "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])* $($RawNameParts[2])*')"
+                    }
+                    else {
+                        $NameFilter = "(" +
+                            "($SurnameAttribute -eq '$($RawNameParts[0])') -and " +
+                            "($GivennameAttribute -like '$($RawNameParts[1])*') -and " +
+                            "($MiddlenameAttribute -like '$($RawNameParts[2])*')" +
+                        ")"
+                    }
                     Write-Verbose "PATTERN : Surname G.M."
                     break  
                 }
@@ -3156,8 +3184,17 @@ function Get-ADUserByName {
                 # И.О.Фамилия 
                 # И. О. Фамилия
                 "^([А-ЯЁ]\.\s{0,}){2}[А-ЯЁ][а-яё]{1,}$" {
-                    $RawNameParts = $RawName.Split(' .') | Where-Object {$PSItem}
-                    $NameFilter = "(displayName -like '$($RawNameParts[2]) $($RawNameParts[0])* $($RawNameParts[1])*')"
+                    $RawNameParts = $RawName.Split(' ').Split('.') | Where-Object {$PSItem}
+                    if ($ByDisplayName) {
+                        $NameFilter = "(displayName -like '$($RawNameParts[2]) $($RawNameParts[0])* $($RawNameParts[1])*'"
+                    }
+                    else {
+                        $NameFilter = "(" +
+                            "($SurnameAttribute -eq '$($RawNameParts[0])') -and " +
+                            "($GivennameAttribute -like '$($RawNameParts[1])*') -and " +
+                            "($MiddlenameAttribute -like '$($RawNameParts[2])*')" +
+                        ")"
+                    }
                     Write-Verbose "PATTERN : G.M. Surname"
                     break  
                 }
@@ -3167,10 +3204,26 @@ function Get-ADUserByName {
                 # Фамилия Имя
                 "^[А-ЯЁ][а-яё]{1,}\s[А-ЯЁ][а-яё]{1,}$" {
                     $RawNameParts = $RawName.Split(' ') | Where-Object {$PSItem}
-                    $NameFilter = "(" + 
-                        "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1]) *') -or " +
-                        "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0]) *')" +
-                    ")"
+                    if ($ByDisplayName) {
+                        $NameFilter = "(" + 
+                            "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1]) *') -or " +
+                            "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0]) *') -or " +
+                            "(displayName -eq '$($RawNameParts[0]) $($RawNameParts[1])') -or " +
+                            "(displayName -eq '$($RawNameParts[0]) $($RawNameParts[0])')" +
+                        ")"
+                    }
+                    else {
+                        $NameFilter = "(" +
+                            "(" +
+                                "($SurnameAttribute -eq '$($RawNameParts[0])') -and " +
+                                "($GivennameAttribute -eq '$($RawNameParts[1])')" +
+                            ") -or " +
+                            "(" +
+                                "($SurnameAttribute -eq '$($RawNameParts[1])') -and " +
+                                "($GivennameAttribute -eq '$($RawNameParts[0])')" +
+                            ")" +
+                        ")"
+                    }
                     Write-Verbose "PATTERN : GivenName Surname"
                     break  
                 }
@@ -3178,19 +3231,35 @@ function Get-ADUserByName {
                 # И. Фамилия
                 # Фамилия И.
                 "^([А-ЯЁ]\.\s?[А-ЯЁ][а-яё]{1,})|([А-ЯЁ][а-яё]{1,}\s[А-ЯЁ]\.)$" {
-                    $RawNameParts = $RawName.Split(' .') | Where-Object {$PSItem}
-                    $NameFilter = "(" + 
-                        "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])*') -or " +
-                        "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0])*')" +
-                    ")"
+                    $RawNameParts = $RawName.Split(' ').Split('.') | Where-Object {$PSItem}
+                    if ($ByDisplayName) {
+                        $NameFilter = "(" + 
+                            "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])*') -or " +
+                            "(displayName -like '$($RawNameParts[0])* $($RawNameParts[1])') -or " +
+                            "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0])*') -or " +
+                            "(displayName -like '$($RawNameParts[1])* $($RawNameParts[0])')" +
+                        ")"
+                    }
+                    else {
+                        $NameFilter = "(" +
+                            "(" +
+                                "($SurnameAttribute -eq '$($RawNameParts[0])') -and " +
+                                "($GivennameAttribute -like '$($RawNameParts[1])*')" +
+                            ") -or " +
+                            "(" +
+                                "($SurnameAttribute -eq '$($RawNameParts[1])') -and " +
+                                "($GivennameAttribute -like '$($RawNameParts[0])*')" +
+                            ")" +
+                        ")"
+                    }
                     Write-Verbose "PATTERN : G. Surname"
                     break  
                 }
                 default {
                     Write-Verbose "PATTERN : Unknown"
                     if (!$Strict) {
-                        Write-Warning "Cannot parse $Record correctly! Searching by displayName"
-                        $NameFilter = "(displayName -like '$RawName*')"                        
+                        Write-Warning "Cannot parse $Record correctly! Searching directly by displayName"
+                        $NameFilter = "(displayName -like '*$RawName*')"                        
                     }
                     else {
                         Write-Warning "Cannot parse $Record correctly!"

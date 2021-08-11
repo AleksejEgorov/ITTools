@@ -12,7 +12,7 @@
 RootModule = 'ITtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.6.3.30'
+ModuleVersion = '1.10.0.35'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -69,18 +69,19 @@ PowerShellVersion = '5.0'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Send-WOL', 'Convert-HexToString', 'Connect-DWClient', 
-               'Get-PasswordExperationDate', 'Get-NetUserDomain', 
-               'Update-ScriptVersion', 'Get-LoggedInUsers', 'Test-Port', 
-               'Import-Excel', 'New-Password', 'ConvertTo-Encoding', 
-               'Get-ResizedPicture', 'Restart-Server', 'New-ShadowConnection', 
-               'Get-UserGroups', 'Get-InventoryInfo', 'Unblock-RDP', 'Wait-Reboot', 
-               'Get-ADSiteServer', 'Limit-String', 'Write-CMLog', 'Write-Log', 
-               'Export-Excel', 'Test-GroupMembership', 'Test-EmailValidation', 
-               'Update-ModuleVersion', 'Get-IPAddressCalculation', 'Get-QWinSta', 
-               'Get-Hex', 'Get-LogonServer', 'Convert-StringToHex', 'Get-Translit', 
-               'Get-BPStagingQuota', 'Get-LockSource', 'New-IPScope', 'Get-IASLog', 
-               'Connect-VNCClient', 'Get-ADParent'
+FunctionsToExport = 'Get-Hex', 'Test-EmailValidation', 'Get-LogonServer', 
+               'Connect-DWClient', 'Connect-VNCClient', 'Get-BPStagingQuota', 
+               'Get-ADSiteServer', 'Wait-Reboot', 'Unblock-RDP', 'Export-Excel', 
+               'Test-GroupMembership', 'ConvertTo-Encoding', 'Get-QWinSta', 
+               'Get-LoggedInUsers', 'Get-LockSource', 'New-ShadowConnection', 
+               'Send-WOL', 'Get-Translit', 'New-Password', 'Get-ResizedPicture', 
+               'Get-UserGroups', 'New-IPScope', 'Limit-String', 'Get-InventoryInfo', 
+               'Get-IASLog', 'Get-ADParent', 'Convert-StringToHex', 
+               'Convert-HexToString', 'Restart-Server', 'Test-Port', 
+               'Get-PasswordExperationDate', 'Write-CMLog', 'Write-Log', 
+               'Get-IPAddressCalculation', 'Get-NetUserDomain', 'Import-Excel', 
+               'Update-ScriptVersion', 'Update-ModuleVersion', 
+               'Connect-ExchangeServer', 'Get-ADUserByName'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -118,7 +119,8 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Function Get-LoggedInUsers: Fixed work with multiple servers.'
+        ReleaseNotes = '1.6.4.35 (11.08.2021): Get-ADUserByName: Search devided to "by specific attributes" & "by displayname"
+Function Get-LoggedInUsers: Fixed work with multiple servers.'
 
         # Prerelease string of this module
         # Prerelease = ''
