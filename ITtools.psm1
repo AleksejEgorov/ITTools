@@ -802,7 +802,7 @@ function Get-LoggedInUsers {
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        [string]$Servers,
+        [string[]]$Servers,
 
         [Parameter(
             Mandatory = $true
@@ -819,7 +819,16 @@ function Get-LoggedInUsers {
     process {
         foreach ($Server in $Servers) {
             
-            $Events = Get-WinEvent -ComputerName $Server -LogName "Microsoft-Windows-TerminalServices-*" -FilterXPath $XPath
+            try {
+                $Events = Get-WinEvent -ComputerName $Server `
+                    -LogName "Microsoft-Windows-TerminalServices-*" `
+                    -FilterXPath $XPath `
+                    -ErrorAction Stop                
+            }
+            catch {
+                continue
+            }
+            
             foreach ($Event in $Events) {
                 $LoggedInUsers += ([xml]$Event.ToXml()).Event.UserData.EventXML.Param1.Split('@')[0]
             } 
