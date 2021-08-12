@@ -1,5 +1,228 @@
 ﻿$Global:ITToolsPath = $PSScriptRoot
 
+class DiskInfo {
+    [string]$Status
+    [int]$Index
+    [string]$Model
+    [string]$Type
+    [string]$Bus
+    [UInt64]$TotalSize
+
+    DiskInfo() {
+        $this.Status = $null
+        $this.Index = $null
+        $this.Model = $null
+        $this.Bus = $null
+        $this.Type = $null
+
+        $this.TotalSize = $null
+    }
+
+    DiskInfo(
+        [string]$stat,
+        [int]$id,
+        [string]$mod,
+        [string]$tp,
+        [string]$bs,
+        [UInt64]$sz
+    ) {
+        $this.Status = $stat
+        $this.Index = $id
+        $this.Model = $mod
+        $this.Type = $tp
+        $this.Bus = $bs
+        $this.TotalSize = $sz
+    }
+
+    [string[]]ToJson() {
+        return $this | ConvertTo-Json
+    } 
+
+}
+
+class MonitorInfo {
+    [bool]$Active
+    [string]$Manufacturer
+    [string]$Model
+    [string]$SerialNumber
+
+    MonitorInfo() {
+        $this.Active = $null
+        $this.Manufacturer = $null
+        $this.Model = $null
+        $this.SerialNumber = $null
+    }
+
+    MonitorInfo(
+        [bool]$act,
+        [string]$man,
+        [string]$mod,
+        [string]$sn
+    ) {
+        $this.Active = $act
+        $this.Manufacturer = $man
+        $this.Model = $mod
+        $this.SerialNumber = $sn
+    }
+
+    [string[]]ToJson() {
+        return $this | ConvertTo-Json
+    } 
+
+}
+
+class InventoryInfo {
+    [string]$Status
+    [string]$HostName
+    [string[]]$IPAddress
+    [string[]]$MACAddress
+    [string]$SerialNumber
+    [string]$Model
+    [string]$CPU
+    [string]$RAM
+    [DiskInfo[]]$Disks
+    [MonitorInfo[]]$Monitors
+    [string[]]$UPSs
+    [string]$LastUser
+
+    InventoryInfo() {
+        $this.Status = $null
+        $this.HostName = $null
+        $this.IPAddress = $null
+        $this.MACAddress = $null
+        $this.SerialNumber = $null
+        $this.Model = $null
+        $this.CPU = $null
+        $this.RAM = $null
+        $this.Disks = $null
+        $this.Monitors = $null
+        $this.UPSs = $null
+        $this.LastUser = $null
+    }
+
+    InventoryInfo(
+        [string]$stat,
+        [string]$hstnm,
+        [string[]]$ip,
+        [string[]]$mac,
+        [string]$sn,
+        [string]$mod,
+        [string]$cp,
+        [string]$mem,
+        [DiskInfo]$dsk,
+        [MonitorInfo[]]$mon,
+        [string[]]$ups,
+        [string]$user
+    ) {
+        $this.Status = $stat
+        $this.HostName = $hstnm
+        $this.IPAddress = $ip
+        $this.MACAddress = $mac
+        $this.SerialNumber = $sn
+        $this.Model = $mod
+        $this.CPU = $cp
+        $this.RAM = $mem
+        $this.Disks = $dsk
+        $this.Monitors = $mon
+        $this.UPSs = $ups
+        $this.LastUser = $user
+    }
+
+    [string[]]ToJson() {
+        return $this | ConvertTo-Json -Depth 5
+    }
+    [PSCustomObject]ToTableObject() {
+        return [PSCustomObject]@{
+            Status = $this.Status
+            HostName = $this.HostName
+
+            IPAddress = & {
+                if ($this.IPAddress) {
+                    return [string]::Join(',',$this.IPAddress)
+                }
+                else {
+                    return $null
+                }
+            }
+
+            MACAddress = & {
+                if ($this.MACAddress) {
+                    return [string]::Join(',',$this.MACAddress)
+                }
+                else {
+                    return $null
+                }
+            }
+
+            SerialNumber = $this.SerialNumber
+            Model = $this.Model
+            CPU = $this.CPU
+            RAM = $this.RAM
+            
+            Disks = & {
+                if ($this.Disks) {
+                    return [string]::Join(
+                        ',',
+                        (
+                            $this.Disks | ForEach-Object {
+                                [string]::Concat(
+                                    $PSItem.Model,
+                                    ' (',
+                                    $PSItem.TotalSize,
+                                    'GB: ',
+                                    $PSItem.Status,
+                                    ' ',
+                                    $PSItem.Bus,
+                                    ' ',
+                                    $PSItem.Type,
+                                    ')'
+                                )
+                            }
+                        )
+                    )
+                }
+                else {
+                    return $null
+                }
+            }
+
+            Monitors = & {
+                if ($this.Monitors) {
+                    return [string]::Join(
+                        ',',
+                        (
+                            $this.Monitors | ForEach-Object {
+                                [string]::Concat(
+                                    $PSItem.Model,
+                                    ' (',
+                                    $PSItem.SerialNumber,
+                                    ')'
+                                )
+                            }
+                        )
+                    )
+                }
+                else {
+                    return $null
+                }
+                
+            }
+
+            UPSs = & {
+                if ($this.UPSs) {
+                    return [string]::Join(',',$this.UPSs)
+                }
+                else {
+                    return $null
+                }
+            }
+
+            LastUser = $this.LastUser
+        }
+    }
+}
+
+
 ##############################################################
 ####                  Convert string to HEX               ####
 ##############################################################
@@ -1364,141 +1587,205 @@ function Get-InventoryInfo {
 
     [CmdletBinding()]
     Param (
-        [Parameter(Mandatory=$True,
-            ValueFromPipeline=$true,
-            Position = 0)]
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0
+        )]
+        [Alias('Name','HostName')]
         [string[]]$Computername,
 
         [Parameter(Mandatory=$false)]
+        [string]$ExportPath = "$HOME\Documents",
+        
+        [Parameter()]
         [switch]$Csv,
 
-        [Parameter(Mandatory=$false)]
-        [string]$Path = "$HOME\Documents",
+        [Parameter()]
+        [switch]$Json,
         
-        [Parameter(Mandatory=$false)]
-        [switch]$Excel
-        
+        [Parameter()]
+        [switch]$Excel    
     )
     
 
     BEGIN {
-        Import-Module ActiveDirectory
-
-        # Creating result object: array of lists.
-        $InvTotal = @()
+        $InventoryTotal = @()
     }
     
 
     PROCESS {
-        ForEach ($Tcomp in $Computername)  {
-
+        ForEach ($Computer in $Computername)  {
+            Write-Progress -Activity "Grabbing inventory information." `
+                -Status "Processing $($Computername.IndexOf($Computer) + 1) of $($Computername.Count): $Computer" `
+                -PercentComplete (($Computername.IndexOf($Computer) / $Computername.Count) * 100)
+            $MachineInfo = New-Object -TypeName InventoryInfo
             # Checking remote machine avaliabelty
             try {
-                $Tman = Get-WmiObject -Class Win32_ComputerSystem -Comp "$Tcomp"  -ErrorAction Stop | Select-Object -ExpandProperty Model
+                $CimSession = New-CimSession -ComputerName $Computer -Name $Computer  -ErrorAction Stop 
             }
             catch {
-                $Tsum = New-Object -TypeName psobject | Select-Object @{n="HostName";e={"$Tcomp"}},`
-                                                                    @{n="IPAddress";e={"unavaliable"}},`
-                                                                    @{n="MAC";e={}},`
-                                                                    @{n="SerialNumber";e={}},`
-                                                                    @{n="Model";e={}},`
-                                                                    @{n="CPU";e={}},`
-                                                                    @{n="RAM";e={}},`
-                                                                    @{n="SystemDisk";e={}},`
-                                                                    @{n="MonitorInfo";e={}},`
-                                                                    @{n="UPSInfo";e={}},`
-                                                                    @{n="User";e={}}
-                $InvTotal += $Tsum
-                continue
-            }
-            # Grabbing info        
-            $Tcpu=Get-WmiObject -Class Win32_Processor -Comp "$Tcomp"  | Select-Object -ExpandProperty Name
-            $Tsn=Get-WmiObject -Class Win32_bios -Comp "$Tcomp" | Select-Object -ExpandProperty SerialNumber
-            $Tdsk=Get-WmiObject -Class Win32_DiskDrive -comp "$Tcomp" | Where-Object {$PSItem.index -eq "0"} | Select-Object model,@{n="TotalSize";e={"{0:n2}" -f ($PSItem.Size /1GB)}} 
-            $Tram=Get-WmiObject -Class Win32_ComputerSystem  -comp "$Tcomp" | Select-Object @{n="RAM";e={"{0:n0}" -f ($PSItem.TotalPhysicalMemory/1GB)}}
-
-            # Trying to get current user and searching in AD        
-            try {
-                $ChTuser=Get-WmiObject win32_computerSystem -Comp "$Tcomp" | Select-Object -ExpandProperty Username
-                $ChTuser=($ChTuser.Split("\"))[1]
-                $ChTuser=Get-ADUser -Identity $ChTuser
-                $Tuser="$($ChTuser.Name) ($($ChTuser.SAMaccountName))"
-            }
-            catch {
-                    # If error, searching the newest user profile and search user in AD
-                    $ChTuser=Get-ChildItem "\\$Tcomp\C$\Users" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty Name
+                $MachineInfo.Status = "Unavaliable"
+                try {
+                    $null = [ipaddress]$Computer
+                    $MachineInfo.IPAddress = $Computer
                     try {
-                        $ChTuser=Get-ADUser -Identity $ChTuser -Properties Name,Pager -ErrorAction Stop
-                        $Tuser="Not logged in. Last was: " + "$($ChTuser.Name) ($($ChTuser.SAMaccountName))"
+                        $MachineInfo.HostName = (Resolve-DnsName $Computer -ErrorAction Stop).NameHost
                     }
-                    # If error, telling about the lack of information. Zero is a result too.
-                    catch {
-                        $Tuser="Not registrated"
-                    }
+                    catch {}
                 }
-
-            # Searching connected monitors
-            $TmonInfo=@()
-            try {
-                $Tmons = Get-WmiObject WmiMonitorID -Namespace root\wmi -ComputerName $Tcomp -ErrorAction SilentlyContinue
-                ForEach ($Tmon in $Tmons) {
-                    $TmonMod = ($Tmon.UserFriendlyName  | Where-Object {$PSItem -ne 0} | ForEach-Object {[char]$PSItem}) -join ""
-                    $TmonSN = ($Tmon.SerialNumberID  | Where-Object {$PSItem -ne 0} | ForEach-Object {[char]$PSItem}) -join ""
-                    $TmonInfo += "$TmonMod ($TmonSN)"
+                catch {
+                    try {
+                        $DnsInfo = Resolve-DnsName $Computer -ErrorAction Stop
+                        $MachineInfo.HostName = $DnsInfo.Name
+                        $MachineInfo.IPAddress = $DnsInfo.IPAddress
+                    }
+                    catch {
+                        $MachineInfo.HostName = $Computer
+                    }
                     
                 }
-                # Converting result from array to string
-                [string]$Tmonitor = ""
-                $TmonInfo | ForEach-Object {$Tmonitor=$Tmonitor + $PSItem + ", "}
-                $Tmonitor = $Tmonitor.Substring(0,$Tmonitor.Length - 2)
+                $InventoryTotal += $MachineInfo
+                $MachineInfo
+                continue
             }
-            Catch {
-                $Tmonitor = "Not connected" 
+            $MachineInfo.Status = "Avaliable"
+
+            # Grabbing data
+            # Model
+            $MachineInfo.Model = (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Model
+
+            # CPU
+            $MachineInfo.CPU = (Get-CimInstance -ClassName Win32_Processor -CimSession $CimSession).Name
+
+            # RAM
+            $MachineInfo.RAM = [Math]::Round(
+                (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).TotalPhysicalMemory / 1GB
+            )
+            
+            # Serial nunber
+            $MachineInfo.SerialNumber = (Get-CimInstance -ClassName Win32_BIOS -CimSession $CimSession).SerialNumber
+
+            # Disk drives
+            $Disks = @()
+            $MachineDisks = Get-PhysicalDisk -CimSession $CimSession
+
+            foreach ($Disk in $MachineDisks) {
+                $DiscInfoObject = New-Object -TypeName DiskInfo
+
+                $DiscInfoObject.Status = $Disk.HealthStatus
+                $DiscInfoObject.Index = $Disk.DeviceId
+                $DiscInfoObject.Model = $Disk.FriendlyName
+                $DiscInfoObject.Type = $Disk.MediaType
+                $DiscInfoObject.Bus = $Disk.BusType
+                $DiscInfoObject.TotalSize = [Math]::Round($Disk.Size / 1GB)
+                $Disks += $DiscInfoObject
             }
+            $MachineInfo.Disks = $Disks
+
+
+            # Trying to get current user and searching in AD  
+            $LastUserSid = (
+                    Get-CimInstance Win32_UserProfile -CimSession $CimSession | `
+                        Where-Object {!$PSItem.Special} | `
+                        Sort-Object LastUseTime -Descending |
+                        Select-Object -First 1
+                ).SID
+
+
+            # Find in AD
+            try {
+                $MachineInfo.LastUser = ([adsisearcher]"(objectSID=$LastUserSid)").FindOne().GetDirectoryEntry().userPrincipalName
+            }
+            catch {
+                $MachineInfo.LastUser = (Get-CimInstance Win32_UserAccount -Filter "SID='$LastUserSid'" -CimSession $CimSession).Caption
+            }
+            if (!$MachineInfo.LastUser) {
+                $MachineInfo.LastUser = 'NoData'
+            }
+
+            
+            # Searching connected monitors
+            $Monitors = @()
+            $MonitorsFromWmi = @()
+            try {
+                $MonitorsFromWmi = Get-CimInstance -Namespace root/WMI `
+                    -ClassName WmiMonitorID `
+                    -CimSession $CimSession `
+                    -ErrorAction Stop
+            }
+            catch {
+                $MachineInfo.Monitors = $Monitors
+            }
+            foreach ($WmiMonitor in $MonitorsFromWmi) {
+                $Monitors += [MonitorInfo]::new( 
+                    $WmiMonitor.Active,
+                    [string]::Join('',($WmiMonitor.ManufacturerName | `
+                            Where-Object {$PSItem -ne 0} | `
+                            ForEach-Object {[char]$PSItem}
+                        )
+                    ), 
+                    [string]::Join('',($WmiMonitor.UserFriendlyName | `
+                            Where-Object {$PSItem -ne 0} | `
+                            ForEach-Object {[char]$PSItem}
+                        )
+                    ), 
+                    [string]::Join('',($WmiMonitor.SerialNumberID | `
+                            Where-Object {$PSItem -ne 0} | `
+                            ForEach-Object {[char]$PSItem}
+                        )
+                    )
+                )
+            }
+            $MachineInfo.Monitors = $Monitors
+            
 
             # So UPS like monitors
-            $Tups=Get-WmiObject -Class Win32_Battery -ComputerName $Tcomp | Select-Object -ExpandProperty DeviceID
-            if (!$Tups) {$Tups="Not connected"}
-
-            # Defining IP and hostname
-            $TNetAdptr = Get-WmiObject -Class Win32_NetworkAdapterConfiguration -comp $Tcomp | `
-                Where-Object {$PSItem.DNSdomain -eq "$($Env:USERDNSDOMAIN)"} 
-            if ($Tcomp -match "^(\d{1,3}\.){3}(\d{1,3})$") {
-                $ThstNm=Get-WmiObject -Class Win32_ComputerSystem -comp $Tcomp | Select-Object -ExpandProperty DNSHostName
-                $TIP=$Tcomp
+            $UPSs = @()
+            foreach ($Ups in (Get-CimInstance -ClassName Win32_Battery -CimSession $CimSession).DeviceID) {
+                $UPSs += $Ups
             }
-            else {
-                $TIP = $TNetAdptr | Select-Object -ExpandProperty IPAddress
-                if ($TIP.Count -gt 1)
-                {
-                    $TIP = $TIP[0]
-                }
-                $ThstNm=$Tcomp
-            }
+            $MachineInfo.UPSs = $UPSs
 
-            # Defining MAC
-            $TMAC = Get-WmiObject -Class Win32_NetworkAdapter -comp $Tcomp | `
-                Where-Object {$PSItem.DeviceID -eq $TNetAdptr.index} | `
-                Select-Object -ExpandProperty MACAddress
+            # Define IPs and HostName
 
-            # Creating result list for each machine.
-            # $Tsum = New-Object -TypeName System.Collections.Generic.List[System.String] | `
-            $Properties = @{
-                HostName = $ThstNm;
-                IPAddress = $TIP;
-                MAC = $TMAC;
-                SerialNumber = $Tsn;
-                Model = $Tman;
-                CPU = $Tcpu;
-                RAM = "$($Tram.RAM) GB";
-                SystemDisk = "$($Tdsk.model) ($($Tdsk.TotalSize) GB)";
-                MonitorInfo = $Tmonitor;
-                User = $Tuser;
-            }
+            # $DomainNics = @()
+            # $DomainNics += (
+            #     Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -CimSession $CimSession| `
+            #         Where-Object {
+            #             $PSItem.DNSdomain -eq "$(
+            #                     (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Domain
+            #                 )"
+            #         }
+            # ).Index
+            # $DomainNicIndex = $DomainNics[0]
 
-            $Tsum = New-Object -TypeName psobject -Property $Properties | Select-Object HostName,IPAddress,MAC,SerialNumber,Model,CPU,RAM,SystemDisk,MonitorInfo,User
+            $MachineInfo.IPAddress = (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -CimSession $CimSession | `
+                Where-Object {
+                    $PSItem.IPAddress # -and `
+                    # ($PSItem.Index -eq $DomainNicIndex)
+                } | ForEach-Object {$PSItem.IPAddress[0]}
+            )
 
-            $InvTotal += $Tsum
+            $MachineInfo.MACAddress = (
+                Get-CimInstance -ClassName Win32_NetworkAdapter -CimSession $CimSession | `
+                    Where-Object {
+                        $PSItem.DeviceID -and
+                        $PSItem.NetEnabled -and
+                        $PSItem.PhysicalAdapter # -and 
+                        # $PSItem.DeviceID -eq $DomainNicIndex
+                    }
+            ).MACAddress
+
+            $MachineInfo.HostName = (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).DNSHostName + 
+                '.' +
+                (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Domain
+        
+            
+            Remove-CimSession -CimSession $CimSession
+            $InventoryTotal += $MachineInfo
+            $MachineInfo       
         }
     }
 
@@ -1507,18 +1794,34 @@ function Get-InventoryInfo {
         if ($Csv) {
             $Date = Get-Date -Format yyyy-MM-dd
             $FileName = "InventoryReport_$Date.csv"
-            $CsvPath = Join-Path -Path $Path -ChildPath $FileName
-            $InvTotal | Export-Csv -Path "$CsvPath" -UseCulture -Encoding UTF8
+            $CsvPath = Join-Path -Path $ExportPath -ChildPath $FileName
+            $InventoryTotal.ToTableObject() | Export-Csv -Path "$CsvPath" -UseCulture -Encoding UTF8
             Write-Host "Csv export done: $CsvPath" -ForegroundColor Green
         }
 
-        if ($Excel) {
-            $InvTotal | Export-Excel -Propetries HostName,IPAddress,MAC,SerialNumber,Model,CPU,RAM,SystemDisk,MonitorInfo,User -ExportTo $Path -Name "InventoryReport" -NotReplace
+        if ($Json) {
+            $Date = Get-Date -Format yyyy-MM-dd
+            $FileName = "InventoryReport_$Date.Json"
+            $JsonPath = Join-Path -Path $ExportPath -ChildPath $FileName
+            $InventoryTotal| ConvertTo-Json -Depth 5 | Out-File -FilePath $JsonPath -Encoding UTF8 
+            Write-Host "Json export done: $JsonPath" -ForegroundColor Green   
         }
 
-        # ...or simply show the result in console.
-        else {
-            return $InvTotal
+        if ($Excel) {
+            $InventoryTotal.ToTableObject() | `
+                Export-Excel -Propetries Status,
+                    HostName,
+                    IPAddress,
+                    MACAddress,
+                    SerialNumber,
+                    Model,
+                    CPU,
+                    RAM,
+                    Disks,
+                    Monitors,
+                    UPSs,
+                    LastUser `
+                -ExportTo $ExportPath -Name "InventoryReport" -NotReplace
         }
     }
 }
