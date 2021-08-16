@@ -3603,3 +3603,51 @@ function Get-ADUserByName {
     }
     end {}
 }
+
+
+
+##############################################################
+####              Create file of specified size           ####
+##############################################################
+function New-TestFile {
+    [CmdletBinding()]
+    param (
+        # Test file path
+        [Parameter(
+            Mandatory,
+            Position = 0
+        )]
+        [strinf]$InFolder,
+
+        # Test file lenght
+        [Parameter(
+            Mandatory,
+            ValueFromPipeline,
+            Position = 1
+        )]
+        [double[]]$Size
+    )
+    
+    begin {
+        # $Path is a folder
+        if (![System.IO.Path]::IsPathRooted($InFolder)) {
+            New-Item -Path $InFolder -ItemType Directory
+        }
+    }
+    
+    process {
+        foreach ($Lenght in $Size) {
+            $File = New-Object -TypeName System.IO.FileStream -ArgumentList @(
+                (Join-Path -Path $InFolder -ChildPath "test$Lenght.dat")
+                Create
+                ReadWrite
+            )
+            $File.SetLength($Lenght * 1048576)
+            $File.Close()
+        }
+    }
+    
+    end {
+        
+    }
+}
