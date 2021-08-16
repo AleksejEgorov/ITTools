@@ -12,7 +12,7 @@
 RootModule = 'ITtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.12.0.39'
+ModuleVersion = '1.12.1.40'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -118,7 +118,8 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = '1.12.0.39 (16.08.2021): New-TestFile: Function added.
+        ReleaseNotes = '1.12.1.40 (16.08.2021): New-TestFile: Bugs fixed.
+1.12.0.39 (16.08.2021): New-TestFile: Function added.
 1.11.1.38 (16.08.2021): Connect-ExchangeServer: Rewrite. Discover bugs fixed.
 1.11.0.37 (12.08.2021): Get-InventoryInfo: Fulli rewrite. Now using CIM.
 1.10.1.36 (11.08.2021): Update-ModuleManifest: Now old release notes are keeped.

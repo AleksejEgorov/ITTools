@@ -3617,7 +3617,7 @@ function New-TestFile {
             Mandatory,
             Position = 0
         )]
-        [strinf]$InFolder,
+        [string]$InFolder,
 
         # Test file lenght
         [Parameter(
@@ -3630,18 +3630,18 @@ function New-TestFile {
     
     begin {
         # $Path is a folder
-        if (![System.IO.Path]::IsPathRooted($InFolder)) {
+        if (!(Test-Path -Path $InFolder)) {
             New-Item -Path $InFolder -ItemType Directory
         }
     }
     
     process {
         foreach ($Lenght in $Size) {
-            $File = New-Object -TypeName System.IO.FileStream -ArgumentList @(
-                (Join-Path -Path $InFolder -ChildPath "test$Lenght.dat")
-                Create
+            $File = New-Object -TypeName System.IO.FileStream -ArgumentList `
+                (Join-Path -Path $InFolder -ChildPath "test$($Lenght.ToString().Replace('.','').Replace(',','')).dat"),
+                Create,
                 ReadWrite
-            )
+            
             $File.SetLength($Lenght * 1048576)
             $File.Close()
         }
