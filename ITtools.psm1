@@ -1,227 +1,5 @@
-﻿$Global:ITToolsPath = $PSScriptRoot
-
-class DiskInfo {
-    [string]$Status
-    [int]$Index
-    [string]$Model
-    [string]$Type
-    [string]$Bus
-    [UInt64]$TotalSize
-
-    DiskInfo() {
-        $this.Status = $null
-        $this.Index = $null
-        $this.Model = $null
-        $this.Bus = $null
-        $this.Type = $null
-
-        $this.TotalSize = $null
-    }
-
-    DiskInfo(
-        [string]$stat,
-        [int]$id,
-        [string]$mod,
-        [string]$tp,
-        [string]$bs,
-        [UInt64]$sz
-    ) {
-        $this.Status = $stat
-        $this.Index = $id
-        $this.Model = $mod
-        $this.Type = $tp
-        $this.Bus = $bs
-        $this.TotalSize = $sz
-    }
-
-    [string[]]ToJson() {
-        return $this | ConvertTo-Json
-    } 
-
-}
-
-class MonitorInfo {
-    [bool]$Active
-    [string]$Manufacturer
-    [string]$Model
-    [string]$SerialNumber
-
-    MonitorInfo() {
-        $this.Active = $null
-        $this.Manufacturer = $null
-        $this.Model = $null
-        $this.SerialNumber = $null
-    }
-
-    MonitorInfo(
-        [bool]$act,
-        [string]$man,
-        [string]$mod,
-        [string]$sn
-    ) {
-        $this.Active = $act
-        $this.Manufacturer = $man
-        $this.Model = $mod
-        $this.SerialNumber = $sn
-    }
-
-    [string[]]ToJson() {
-        return $this | ConvertTo-Json
-    } 
-
-}
-
-class InventoryInfo {
-    [string]$Status
-    [string]$HostName
-    [string[]]$IPAddress
-    [string[]]$MACAddress
-    [string]$SerialNumber
-    [string]$Model
-    [string]$CPU
-    [string]$RAM
-    [DiskInfo[]]$Disks
-    [MonitorInfo[]]$Monitors
-    [string[]]$UPSs
-    [string]$LastUser
-
-    InventoryInfo() {
-        $this.Status = $null
-        $this.HostName = $null
-        $this.IPAddress = $null
-        $this.MACAddress = $null
-        $this.SerialNumber = $null
-        $this.Model = $null
-        $this.CPU = $null
-        $this.RAM = $null
-        $this.Disks = $null
-        $this.Monitors = $null
-        $this.UPSs = $null
-        $this.LastUser = $null
-    }
-
-    InventoryInfo(
-        [string]$stat,
-        [string]$hstnm,
-        [string[]]$ip,
-        [string[]]$mac,
-        [string]$sn,
-        [string]$mod,
-        [string]$cp,
-        [string]$mem,
-        [DiskInfo]$dsk,
-        [MonitorInfo[]]$mon,
-        [string[]]$ups,
-        [string]$user
-    ) {
-        $this.Status = $stat
-        $this.HostName = $hstnm
-        $this.IPAddress = $ip
-        $this.MACAddress = $mac
-        $this.SerialNumber = $sn
-        $this.Model = $mod
-        $this.CPU = $cp
-        $this.RAM = $mem
-        $this.Disks = $dsk
-        $this.Monitors = $mon
-        $this.UPSs = $ups
-        $this.LastUser = $user
-    }
-
-    [string[]]ToJson() {
-        return $this | ConvertTo-Json -Depth 5
-    }
-    [PSCustomObject]ToTableObject() {
-        return [PSCustomObject]@{
-            Status = $this.Status
-            HostName = $this.HostName
-
-            IPAddress = & {
-                if ($this.IPAddress) {
-                    return [string]::Join(',',$this.IPAddress)
-                }
-                else {
-                    return $null
-                }
-            }
-
-            MACAddress = & {
-                if ($this.MACAddress) {
-                    return [string]::Join(',',$this.MACAddress)
-                }
-                else {
-                    return $null
-                }
-            }
-
-            SerialNumber = $this.SerialNumber
-            Model = $this.Model
-            CPU = $this.CPU
-            RAM = $this.RAM
-            
-            Disks = & {
-                if ($this.Disks) {
-                    return [string]::Join(
-                        ',',
-                        (
-                            $this.Disks | ForEach-Object {
-                                [string]::Concat(
-                                    $PSItem.Model,
-                                    ' (',
-                                    $PSItem.TotalSize,
-                                    'GB: ',
-                                    $PSItem.Status,
-                                    ' ',
-                                    $PSItem.Bus,
-                                    ' ',
-                                    $PSItem.Type,
-                                    ')'
-                                )
-                            }
-                        )
-                    )
-                }
-                else {
-                    return $null
-                }
-            }
-
-            Monitors = & {
-                if ($this.Monitors) {
-                    return [string]::Join(
-                        ',',
-                        (
-                            $this.Monitors | ForEach-Object {
-                                [string]::Concat(
-                                    $PSItem.Model,
-                                    ' (',
-                                    $PSItem.SerialNumber,
-                                    ')'
-                                )
-                            }
-                        )
-                    )
-                }
-                else {
-                    return $null
-                }
-                
-            }
-
-            UPSs = & {
-                if ($this.UPSs) {
-                    return [string]::Join(',',$this.UPSs)
-                }
-                else {
-                    return $null
-                }
-            }
-
-            LastUser = $this.LastUser
-        }
-    }
-}
-
+﻿using module .\ITToolsClasses.psm1
+$Global:ITToolsPath = $PSScriptRoot
 
 ##############################################################
 ####                  Convert string to HEX               ####
@@ -1068,7 +846,6 @@ function Get-LoggedInUsers {
 ####           Get locked account source from PDC         ####
 ##############################################################
 function Get-LockSource {
-    #Requires -Modules ActiveDirectory
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true,
@@ -1583,19 +1360,10 @@ function Limit-String {
 ##############################################################
 ####            Grabbing inventory information            ####
 ##############################################################
-function Get-InventoryInfo {
+function Get-MyInventoryInfo {
 
     [CmdletBinding()]
     Param (
-        [Parameter(
-            Mandatory = $true,
-            ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 0
-        )]
-        [Alias('Name','HostName')]
-        [string[]]$Computername,
-
         [Parameter(Mandatory=$false)]
         [string]$ExportPath = "$HOME\Documents",
         
@@ -1616,60 +1384,28 @@ function Get-InventoryInfo {
     
 
     PROCESS {
-        ForEach ($Computer in $Computername)  {
-            Write-Progress -Activity "Grabbing inventory information." `
-                -Status "Processing $($Computername.IndexOf($Computer) + 1) of $($Computername.Count): $Computer" `
-                -PercentComplete (($Computername.IndexOf($Computer) / $Computername.Count) * 100)
             $MachineInfo = New-Object -TypeName InventoryInfo
             # Checking remote machine avaliabelty
-            try {
-                $CimSession = New-CimSession -ComputerName $Computer -Name $Computer  -ErrorAction Stop 
-            }
-            catch {
-                $MachineInfo.Status = "Unavaliable"
-                try {
-                    $null = [ipaddress]$Computer
-                    $MachineInfo.IPAddress = $Computer
-                    try {
-                        $MachineInfo.HostName = (Resolve-DnsName $Computer -ErrorAction Stop).NameHost
-                    }
-                    catch {}
-                }
-                catch {
-                    try {
-                        $DnsInfo = Resolve-DnsName $Computer -ErrorAction Stop
-                        $MachineInfo.HostName = $DnsInfo.Name
-                        $MachineInfo.IPAddress = $DnsInfo.IPAddress
-                    }
-                    catch {
-                        $MachineInfo.HostName = $Computer
-                    }
-                    
-                }
-                $InventoryTotal += $MachineInfo
-                $MachineInfo
-                continue
-            }
             $MachineInfo.Status = "Avaliable"
 
             # Grabbing data
             # Model
-            $MachineInfo.Model = (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Model
+            $MachineInfo.Model = (Get-CimInstance -ClassName Win32_ComputerSystem).Model
 
             # CPU
-            $MachineInfo.CPU = (Get-CimInstance -ClassName Win32_Processor -CimSession $CimSession).Name
+            $MachineInfo.CPU = (Get-CimInstance -ClassName Win32_Processor).Name
 
             # RAM
             $MachineInfo.RAM = [Math]::Round(
-                (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).TotalPhysicalMemory / 1GB
+                (Get-CimInstance -ClassName Win32_ComputerSystem).TotalPhysicalMemory / 1GB
             )
             
             # Serial nunber
-            $MachineInfo.SerialNumber = (Get-CimInstance -ClassName Win32_BIOS -CimSession $CimSession).SerialNumber
+            $MachineInfo.SerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
 
             # Disk drives
             $Disks = @()
-            $MachineDisks = Get-PhysicalDisk -CimSession $CimSession
+            $MachineDisks = Get-PhysicalDisk
 
             foreach ($Disk in $MachineDisks) {
                 $DiscInfoObject = New-Object -TypeName DiskInfo
@@ -1687,8 +1423,11 @@ function Get-InventoryInfo {
 
             # Trying to get current user and searching in AD  
             $LastUserSid = (
-                    Get-CimInstance Win32_UserProfile -CimSession $CimSession | `
-                        Where-Object {!$PSItem.Special} | `
+                    Get-CimInstance Win32_UserProfile | `
+                        Where-Object {
+                            !$PSItem.Special -and `
+                            ($PSItem.SID -notmatch "\-1000$")
+                        } | `
                         Sort-Object LastUseTime -Descending |
                         Select-Object -First 1
                 ).SID
@@ -1699,7 +1438,7 @@ function Get-InventoryInfo {
                 $MachineInfo.LastUser = ([adsisearcher]"(objectSID=$LastUserSid)").FindOne().GetDirectoryEntry().userPrincipalName
             }
             catch {
-                $MachineInfo.LastUser = (Get-CimInstance Win32_UserAccount -Filter "SID='$LastUserSid'" -CimSession $CimSession).Caption
+                $MachineInfo.LastUser = (Get-CimInstance Win32_UserAccount -Filter "SID='$LastUserSid'").Caption
             }
             if (!$MachineInfo.LastUser) {
                 $MachineInfo.LastUser = 'NoData'
@@ -1712,7 +1451,7 @@ function Get-InventoryInfo {
             try {
                 $MonitorsFromWmi = Get-CimInstance -Namespace root/WMI `
                     -ClassName WmiMonitorID `
-                    -CimSession $CimSession `
+                    `
                     -ErrorAction Stop
             }
             catch {
@@ -1743,7 +1482,7 @@ function Get-InventoryInfo {
 
             # So UPS like monitors
             $UPSs = @()
-            foreach ($Ups in (Get-CimInstance -ClassName Win32_Battery -CimSession $CimSession).DeviceID) {
+            foreach ($Ups in (Get-CimInstance -ClassName Win32_Battery).DeviceID) {
                 $UPSs += $Ups
             }
             $MachineInfo.UPSs = $UPSs
@@ -1752,16 +1491,16 @@ function Get-InventoryInfo {
 
             # $DomainNics = @()
             # $DomainNics += (
-            #     Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -CimSession $CimSession| `
+            #     Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration| `
             #         Where-Object {
             #             $PSItem.DNSdomain -eq "$(
-            #                     (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Domain
+            #                     (Get-CimInstance -ClassName Win32_ComputerSystem).Domain
             #                 )"
             #         }
             # ).Index
             # $DomainNicIndex = $DomainNics[0]
 
-            $MachineInfo.IPAddress = (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -CimSession $CimSession | `
+            $MachineInfo.IPAddress = (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | `
                 Where-Object {
                     $PSItem.IPAddress # -and `
                     # ($PSItem.Index -eq $DomainNicIndex)
@@ -1769,7 +1508,7 @@ function Get-InventoryInfo {
             )
 
             $MachineInfo.MACAddress = (
-                Get-CimInstance -ClassName Win32_NetworkAdapter -CimSession $CimSession | `
+                Get-CimInstance -ClassName Win32_NetworkAdapter | `
                     Where-Object {
                         $PSItem.DeviceID -and
                         $PSItem.NetEnabled -and
@@ -1778,15 +1517,13 @@ function Get-InventoryInfo {
                     }
             ).MACAddress
 
-            $MachineInfo.HostName = (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).DNSHostName + 
+            $MachineInfo.HostName = (Get-CimInstance -ClassName Win32_ComputerSystem).DNSHostName + 
                 '.' +
-                (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Domain
+                (Get-CimInstance -ClassName Win32_ComputerSystem).Domain
         
             
-            Remove-CimSession -CimSession $CimSession
             $InventoryTotal += $MachineInfo
             $MachineInfo       
-        }
     }
 
     END {
@@ -3650,4 +3387,43 @@ function New-TestFile {
     end {
         
     }
+}
+
+
+
+##############################################################
+####             Invoke process and grub output           ####
+##############################################################
+function Invoke-Process {
+    [CmdletBinding()]
+    param (
+        # Command path
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [string]$Command,
+
+        # Command path
+        [Parameter(
+            Mandatory = $false,
+            Position = 1
+        )]
+        [string[]]$ArgumentList
+    )
+    
+    $ProcessInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $ProcessInfo.FileName = $Command
+    $ProcessInfo.RedirectStandardError = $true
+    $ProcessInfo.RedirectStandardOutput = $true
+    $ProcessInfo.UseShellExecute = $false
+    $ProcessInfo.Arguments = [string]::Join(' ',$ArgumentList)
+
+    $Process = [System.Diagnostics.Process]::new()
+    $Process.StartInfo = $ProcessInfo
+    $null = $Process.Start()
+    $Process.WaitForExit()
+
+    return [ProcessInvocationResult]::new($Process)
+    
 }
