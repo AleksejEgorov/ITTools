@@ -1,4 +1,4 @@
-﻿using module .\ITToolsClasses.psm1
+﻿using module .\ITTools_Classes.psm1
 using module .\ITTools_Logging.psm1
 using module .\ITTools_FileProcessing.psm1
 $Global:ITToolsPath = $PSScriptRoot
@@ -2431,8 +2431,7 @@ function Update-ModuleVersion {
                     $BuildVer,
                     $RevisionVer
                 )
-                Write-Verbose $NewVersion
-                Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion -FunctionsToExport '*'
+                Write-Verbose $NewVersion 
                 if ($ReleaseNotes) {
                     $ReleaseNotesString = (
                         $NewVersion.ToString() + 
@@ -2442,7 +2441,8 @@ function Update-ModuleVersion {
                         (Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop).ReleaseNotes
                     )
                     Update-ModuleManifest -Path $ManifestPath -ReleaseNotes $ReleaseNotesString
-                }  
+                }
+                Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion -FunctionsToExport '*'
             }            
         }
     }

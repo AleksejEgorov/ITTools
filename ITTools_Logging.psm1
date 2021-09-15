@@ -19,9 +19,11 @@ function Write-CMLog {
         None. Write-CMLog don't return anything.
     .EXAMPLE
         PS> Write-CMLog -LogFilePath C:\Application\some.log -Level Info -Message "File created"
+        
         Write info message "File created" to log file C:\Application\some.log
     .EXAMPLE
-        PS> $Error[0].Exception | Write-CMLog -LogFilePath C:\Application\some.log -Level Error
+        PS>$Error[0].Exception | Write-CMLog -LogFilePath C:\Application\some.log -Level Error
+        
         Write last error message to log file C:\Application\some.log as error record.
     .LINK
         https://docs.microsoft.com/en-us/mem/configmgr/core/support/tools
