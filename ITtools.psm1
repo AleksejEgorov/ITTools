@@ -2437,7 +2437,6 @@ function Update-ModuleVersion {
                         $NewVersion.ToString() + 
                         (Get-Date -Format ' (dd.MM.yyyy): ') +
                         "$ReleaseNotes`n" +
-                        '            ' + 
                         (Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop).ReleaseNotes
                     )
                     Update-ModuleManifest -Path $ManifestPath -ReleaseNotes $ReleaseNotesString

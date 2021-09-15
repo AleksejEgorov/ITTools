@@ -109,16 +109,16 @@ PrivateData = @{
 
         # ReleaseNotes of this module
         ReleaseNotes = '1.13.4.45 (15.09.2021): Required modules added.
-            1.13.3.44 (15.09.2021): Comment-Based help added
-            1.13.2.43 (15.09.2021): Update-ModuleVersion: Minor updates.
-            1.13.0.41 (15.09.2021): Logging anf FileProcessing in separate files.
-            1.12.1.40 (16.08.2021): New-TestFile: Bugs fixed.
-            1.12.0.39 (16.08.2021): New-TestFile: Function added.
-            1.11.1.38 (16.08.2021): Connect-ExchangeServer: Rewrite. Discover bugs fixed.
-            1.11.0.37 (12.08.2021): Get-InventoryInfo: Fulli rewrite. Now using CIM.
-            1.10.1.36 (11.08.2021): Update-ModuleManifest: Now old release notes are keeped.
-            1.10.0.35 (11.08.2021): Get-ADUserByName: Search devided to "by specific attributes" & "by displayname"
-            Function Get-LoggedInUsers: Fixed work with multiple servers.'
+1.13.3.44 (15.09.2021): Comment-Based help added
+1.13.2.43 (15.09.2021): Update-ModuleVersion: Minor updates.
+1.13.0.41 (15.09.2021): Logging anf FileProcessing in separate files.
+1.12.1.40 (16.08.2021): New-TestFile: Bugs fixed.
+1.12.0.39 (16.08.2021): New-TestFile: Function added.
+1.11.1.38 (16.08.2021): Connect-ExchangeServer: Rewrite. Discover bugs fixed.
+1.11.0.37 (12.08.2021): Get-InventoryInfo: Fulli rewrite. Now using CIM.
+1.10.1.36 (11.08.2021): Update-ModuleManifest: Now old release notes are keeped.
+1.10.0.35 (11.08.2021): Get-ADUserByName: Search devided to "by specific attributes" & "by displayname"
+Function Get-LoggedInUsers: Fixed work with multiple servers.'
 
         # Prerelease string of this module
         # Prerelease = ''
