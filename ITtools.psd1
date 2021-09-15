@@ -12,7 +12,7 @@
 RootModule = 'ITtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.13.2.43'
+ModuleVersion = '1.13.3.44'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -69,18 +69,19 @@ PowerShellVersion = '5.0'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Get-Hex', 'Test-EmailValidation', 'Get-LogonServer', 
-               'Connect-DWClient', 'Connect-VNCClient', 'Get-BPStagingQuota', 
-               'Get-ADSiteServer', 'Wait-Reboot', 'Unblock-RDP', 'Export-Excel', 
-               'Test-GroupMembership', 'ConvertTo-Encoding', 'Get-QWinSta', 
-               'Get-LoggedInUsers', 'Get-LockSource', 'New-ShadowConnection', 
-               'Send-WOL', 'Get-Translit', 'New-Password', 'Get-ResizedPicture', 
-               'Get-UserGroups', 'New-IPScope', 'Limit-String', 'Get-InventoryInfo', 
-               'Get-ADParent', 'Convert-StringToHex', 'Convert-HexToString', 
-               'Restart-Server', 'Test-Port', 'Get-PasswordExperationDate', 
-               'Get-IPAddressCalculation', 'Get-NetUserDomain', 'Import-Excel', 
-               'Update-ScriptVersion', 'Update-ModuleVersion', 
-               'Connect-ExchangeServer', 'Get-ADUserByName', 'Invoke-Process'
+FunctionsToExport = 'Send-WOL', 'Convert-HexToString', 'Connect-DWClient', 
+               'Connect-ExchangeServer', 'Invoke-Process', 
+               'Get-PasswordExperationDate', 'Get-NetUserDomain', 
+               'Update-ScriptVersion', 'Get-LoggedInUsers', 'Test-Port', 
+               'Import-Excel', 'New-Password', 'ConvertTo-Encoding', 
+               'Get-ResizedPicture', 'Restart-Server', 'New-ShadowConnection', 
+               'Get-UserGroups', 'Get-InventoryInfo', 'Unblock-RDP', 
+               'Get-ADSiteServer', 'Wait-Reboot', 'Limit-String', 'Export-Excel', 
+               'Test-GroupMembership', 'Test-EmailValidation', 
+               'Update-ModuleVersion', 'Get-IPAddressCalculation', 'Get-QWinSta', 
+               'Get-Hex', 'Get-LogonServer', 'Convert-StringToHex', 'Get-Translit', 
+               'Get-BPStagingQuota', 'Get-LockSource', 'Get-ADUserByName', 
+               'New-IPScope', 'Get-ADParent', 'Connect-VNCClient'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -118,7 +119,8 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = '1.13.2.43 (15.09.2021): Update-ModuleVersion: Minor updates.
+        ReleaseNotes = '1.13.3.44 (15.09.2021): Comment-Based help added
+            1.13.2.43 (15.09.2021): Update-ModuleVersion: Minor updates.
             1.13.0.41 (15.09.2021): Logging anf FileProcessing in separate files.
             1.12.1.40 (16.08.2021): New-TestFile: Bugs fixed.
             1.12.0.39 (16.08.2021): New-TestFile: Function added.

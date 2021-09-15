@@ -1,18 +1,39 @@
-
-
-
-##############################################################
-####            Record log entry in CM style              ####
-##############################################################
 function Write-CMLog {
+    <#
+    .SYNOPSIS
+        Write log entry in CM style
+    .DESCRIPTION
+        Write log record to specified file in configuration manager style.
+        Log can be read and processed by CMTrace.exe
+    .PARAMETER Message
+        Message text as System.String
+    .PARAMETER LogFilePath
+        Path to log file as System.String.
+    .PARAMETER Level
+        Log entry level as System.String from fixed set (Info, Warning, Error).
+    .PARAMETER Component
+        Source of log entry as System.String. Script file name or PSConsole is Default
+    .INPUTS
+        Message as System.String.
+    .OUTPUTS
+        None. Write-CMLog don't return anything.
+    .EXAMPLE
+        PS> Write-CMLog -LogFilePath C:\Application\some.log -Level Info -Message "File created"
+        Write info message "File created" to log file C:\Application\some.log
+    .EXAMPLE
+        PS> $Error[0].Exception | Write-CMLog -LogFilePath C:\Application\some.log -Level Error
+        Write last error message to log file C:\Application\some.log as error record.
+    .LINK
+        https://docs.microsoft.com/en-us/mem/configmgr/core/support/tools
+    #>
     [CmdletBinding()]
     Param(
         # Log message
         [Parameter(
             Mandatory = $true,
+            Position = 0,
             ValueFromPipeline = $true,
-            Position = 0
-
+            ValueFromPipelineByPropertyName = $true
         )]
         [string]$Message,
         
@@ -23,7 +44,7 @@ function Write-CMLog {
         )]
         [string]$LogFilePath,
 
-        # Log file
+        # Entry level
         [Parameter(
             Mandatory = $true,
             Position = 2
@@ -40,13 +61,7 @@ function Write-CMLog {
             Mandatory = $false,
             Position = 3
         )]
-        [String]$Component,
-
-        # Source
-        [Parameter(
-            Mandatory=$false
-        )]
-        [String]$Source        
+        [String]$Component 
     )
 
     # Define record type
@@ -91,18 +106,42 @@ function Write-CMLog {
 }
 
 
-##############################################################
-####          Record log entry in simple style            ####
-##############################################################
 function Write-Log {
+    <#
+    .SYNOPSIS
+        Write log entry in simple
+    .DESCRIPTION
+        Write log record to specified file in simple plain text style.
+        Log can be read and processed by any text editor, like notepad.
+    .PARAMETER Message
+        Message text as System.String
+    .PARAMETER LogFilePath
+        Path to log file as System.String.
+    .PARAMETER Level
+        Log entry level as System.String from fixed set (INFO, WARN, FAIL).
+    .INPUTS
+        Message as System.String.
+    .OUTPUTS
+        None. Write-CMLog don't return anything.
+    .EXAMPLE
+        PS> Write-Log -LogFilePath C:\Application\some.log -Level INFO -Message "File created"
+        Write info message "File created" to log file C:\Application\some.log
+    .EXAMPLE
+        PS> $Error[0].Exception | Write-Log -LogFilePath C:\Application\some.log -Level FAIL
+        Write last error message to log file C:\Application\some.log as error record.
+    .LINK
+        https://docs.microsoft.com/en-us/mem/configmgr/core/support/tools
+    .LINK
+        Write-CMLog
+    #>
     [CmdletBinding()]
     param (
         # Log message
         [Parameter(
             Mandatory = $true,
+            Position = 0,
             ValueFromPipeline = $true,
-            Position = 0
-
+            ValueFromPipelineByPropertyName = $true
         )]
         [string]$Message,
         
