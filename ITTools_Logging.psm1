@@ -94,9 +94,16 @@ function Write-CMLog {
     # Write the line to the log file
     [bool]$LogSuccess = $false
     $AttemptsLeft = 10
+    if ($PSVersionTable.PSVersion -ge [version]'6.0.0') {
+        $Encoding = 'utf8bom'
+    }
+    else {
+        $Encoding = 'utf8'
+    }
+    
     while (!($LogSuccess -or $AttemptsLeft -eq 0)) {
         try {
-            Add-Content -Path $LogFilePath -Value $Content -Encoding UTF8 -ErrorAction Stop
+            Add-Content -Path $LogFilePath -Value $Content -Encoding $Encoding -ErrorAction Stop
             $LogSuccess = $true
         }
         catch {

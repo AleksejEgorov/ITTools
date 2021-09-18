@@ -2441,7 +2441,7 @@ function Update-ModuleVersion {
                     )
                     Update-ModuleManifest -Path $ManifestPath -ReleaseNotes $ReleaseNotesString
                 }
-                Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion -FunctionsToExport '*'
+                Update-ModuleManifest -Path $ManifestPath -ModuleVersion $NewVersion
             }            
         }
     }
