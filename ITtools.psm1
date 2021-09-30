@@ -2163,10 +2163,11 @@ function Update-ModuleVersion {
             }
 
             try {
-                $NestedModules = (Get-Module $File).NestedModules.Name
+                $NestedModules = (Get-Module $File).NestedModules.Path | ForEach-Object {[System.IO.Path]::GetFileName($PSItem)}
+                Write-Verbose "$FileItem nested modules are $([string]::Join(', ', $NestedModules))"
             }
             catch {
-                
+                Write-Verbose "$FileItem has no nested modules"
             }
             
 
@@ -2199,6 +2200,8 @@ function Update-ModuleVersion {
 
                 $ModuleInfo = @{
                     Path = $ManifestPath
+                    ModuleVersion = $NewVersion
+                    FunctionsToExport = '*'
                 }
 
                 if ($ReleaseNotes) {

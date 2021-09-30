@@ -1,3 +1,6 @@
+using namespace System.Collections.Generic
+using namespace Microsoft.ActiveDirectory.Management
+
 ##############################################################
 ####    Search user in ActiveDirectory by displayname     ####
 ##############################################################
@@ -215,49 +218,68 @@ function Get-ADUserByName {
     end {}
 }
 
-
-
-
 ##############################################################
 ####                  Define user's groups                ####
 ##############################################################
 function Get-ADUserGroups {
+    [CmdletBinding()]
     param (
         [Parameter(
-            Mandatory = $true, ValueFromPipeline = $true
+            Mandatory = $true, 
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
         )]
         [Alias("SamAccountName")]
-        [string]$UserName,
+        [string[]]$UserName,
         
         [Parameter(Mandatory = $false)]
         [switch]$AsObject
     )
 
-    begin {}
+    begin {
+        $Result = New-Object 'Dictionary[string,psobject]'
+    }
     
     process {
         foreach ($User in $UserName) {
             try {
-                $GroupList = (Get-ADUser $User -Properties memberof -ErrorAction Stop).MemberOf | 
-                    ForEach-Object {Get-ADGroup -Identity $PSItem}
+                $ADUser = Get-ADUser $User -Properties MemberOf -ErrorAction Stop
             }
             catch {
-                Write-Warning "User $User not found in $env:USERDOMAIN."          
+                Write-Warning "User $User not found in $env:USERDOMAIN."
+                continue
             }
 
-            if ($AsObject) {
-                return $GroupList
+            $GroupList = $ADUser.MemberOf
+
+            $Groups = New-Object 'List[ADGroup]'
+            foreach ($Group in $GroupList) {
+                $Groups += Get-ADGroup -Identity $Group
             }
-            else {
-                $GroupList | Select-Object Name
+            $UserResult = [PSCustomObject]@{
+                User = $ADUser
+                Groups = $Groups
             }
+            $Result.Add($User,$UserResult)
+            
         }
     }
 
-    end {}
+    end {
+        if ($AsObject) {
+            return $Result            
+        }
+        else {
+            foreach ($Record in $Result.Keys) {
+                Write-Host ":::::: $($Result.$Record.User.Name) ($($Result.$Record.User.UserPrincipalName)) ::::::" -ForegroundColor Green
+                foreach ($Group in $Result.$Record.Groups) {
+                    Write-Host $Group.Name
+                }
+            }
+        }
+    }
 }
-
-
 
 ##############################################################
 ####             Get parent organizational unit           ####
@@ -317,8 +339,6 @@ function Get-ADParent {
     }
     end {}   
 }
-
-
 
 ##############################################################
 ####          Test user if member of specific group       ####
@@ -388,9 +408,6 @@ function Test-ADGroupMembership {
     end {}
 }
 
-
-
-
 ##############################################################
 ####                 Define server by site                ####
 ##############################################################
@@ -416,9 +433,6 @@ function Get-ADSiteServer {
         $SiteObject.Servers | Select-Object SiteName,Name,IPAddress
     }
 }
-
-
-
 
 ##############################################################
 ####           Get locked account source from PDC         ####
