@@ -220,7 +220,6 @@ class InventoryInfo {
     }
 }
 
-
 class ProcessInvocationResult {
     [string]$Command
     [string[]]$ArgumentList
@@ -266,5 +265,52 @@ class ProcessInvocationResult {
             $proc.StandardError.ReadToEnd().Split("`n"),
             $proc.ExitCode
         )
+    }
+}
+
+class TraslitCase {
+    [char]$BaseSymbol
+    [int]$SymbolPosition
+    [int]$Shift
+    [string]$RegEx
+    [string]$TransSymbol
+
+    TraslitCase (
+        [char]$bs,
+        [int]$sp,
+        [string]$ts
+    ) {
+        $this.BaseSymbol = $bs
+        $this.SymbolPosition = $sp
+        $this.Shift = 0
+        $this.RegEx = '.'
+        $this.TransSymbol = $ts
+    }
+
+    TraslitCase (
+        [char]$bs,
+        [int]$shft,
+        [string]$re,
+        [string]$ts
+    ) {
+        $this.BaseSymbol = $bs
+        $this.SymbolPosition = [int]::MinValue
+        $this.Shift = $shft
+        $this.RegEx = $re
+        $this.TransSymbol = $ts
+    }
+
+    TraslitCase (
+        [char]$bs,
+        [int]$pos,
+        [int]$shft,
+        [string]$re,
+        [string]$ts
+    ) {
+        $this.BaseSymbol = $bs
+        $this.SymbolPosition = $pos
+        $this.Shift = $shft
+        $this.RegEx = $re
+        $this.TransSymbol = $ts
     }
 }

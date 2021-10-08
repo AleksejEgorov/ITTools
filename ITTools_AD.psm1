@@ -487,3 +487,80 @@ function Get-ADLockSource {
         return $Result
     }
 }
+
+
+##############################################################
+####              Get password experation date            ####
+##############################################################
+function Get-PasswordExperationDate {
+    [CmdletBinding()]
+    param (
+        # Username list
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0
+        )]
+        [string[]]$SamAccountName,
+
+        # Domain to search. Own at default
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$Domain = ($env:USERDNSDOMAIN).ToLower()
+    )
+    
+    begin {
+        Import-Module ActiveDirectory
+        $Result = @()
+        Write-Debug "Begin done"
+    }
+    
+    process {
+        foreach ($User in $SamAccountName) {
+            Write-Debug "Processing $User"
+            try {
+                $ADUser = Get-ADUser -Identity $User -Properties PasswordLastSet,msDS-UserPasswordExpiryTimeComputed,PasswordNeverExpires,Enabled
+            }
+            catch {
+                Write-Error -Message "User $User not found in domain $Domain" `
+                    -Category ObjectNotFound `
+                    -RecommendedAction "Check if username existing." `
+                    -TargetObject "$User" `
+                    -ErrorId 1
+                continue
+            }
+
+            Set-StrictMode -Version Latest
+            $Result += [PSCustomObject]@{
+                Name = $ADUser.Name
+                SamAccountName = $ADUser.SamAccountName
+                Enabled = $ADUser.Enabled
+                PasswordLastSet = $ADUser.PasswordLastSet
+                PasswordExpires = & {
+                    try {
+                        [datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed") 
+                    }
+                    catch {
+                        [DateTime]::MaxValue
+                    }
+                }
+                DaysLeft = & {
+                    try {
+                        ([datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed") - (Get-Date)).Days
+                    } 
+                    catch {
+                        -1
+                    }
+                }
+                PasswordNeverExpires = $ADUser.PasswordNeverExpires
+            }
+            Set-StrictMode -Off
+        }
+    }
+    
+    end {
+        return $Result
+    }
+}

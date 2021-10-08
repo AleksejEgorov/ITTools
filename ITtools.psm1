@@ -1,68 +1,5 @@
-﻿$Global:ITToolsPath = $PSScriptRoot
-
-
-##############################################################
-####                  Convert string to HEX               ####
-##############################################################
-
-function Get-Hex {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$String
-    )
-
-    foreach ($Char in $String.ToCharArray()) {
-        $Result = $Result + [System.String]::Format("{0:X}",[System.Convert]::ToUInt32($Char))
-    }
-
-    return $Result
-}
-
-
-
-##############################################################
-####                Validate e-mail address               ####
-##############################################################
-function Test-EmailValidation {
-    param (
-        [Parameter(
-            Mandatory = $true
-        )]
-        [AllowEmptyString()]
-        [string]$EmailAddress
-    )
-
-    $MailRegex = "^[a-zA-Z0-9\-\._]*@[a-zA-Z0-9\-_.]*\.[a-zA-Z]{2,5}$"
-    # If real e-mail
-    if ($EmailAddress -match $MailRegex) {
-        return $EmailAddress
-    }
-
-    else {
-        # Replace 'me' to current user SamAccountName
-        if ($EmailAddress -eq 'me') {
-            $EmailAddress = $env:USERNAME
-        }
-        try {
-            # Find user in AD. Valid if has EmailAddress
-            $ADMail = ([adsisearcher]"(&(objectClass=user)(objectCategory=person)(sAMAccountName=$EmailAddress))").FindOne().GetDirectoryEntry().mail
-        }
-        catch {
-            Write-Host "No user $EmailAddress in domain $($Env:USERDNSDOMAIN.ToLower())!" -ForegroundColor Red -BackgroundColor Black
-            return $null
-        }
-        if ($ADMail -and ($ADMail -match $MailRegex)) {
-            return $ADMail
-        }
-        else {
-            Write-Host "User $EmailAddress has no valid mail!" -ForegroundColor Red -BackgroundColor Black
-            return $null
-        }
-    }
-}
-
-
+﻿using module .\ITTools_Classes.psm1
+$Global:ITToolsPath = $PSScriptRoot
 
 ##############################################################
 ####  Show logon server for current user on specified PC  ####
@@ -606,45 +543,6 @@ function Export-Excel {
 
 
 
-##############################################################
-####                Convert object encoding               ####
-##############################################################
-function ConvertTo-Encoding {
-    param (
-        # Source encoding
-        [Parameter(
-            Mandatory = $true,
-            Position = 0
-        )]
-        [string]$From,
-        
-        [Parameter(
-            Mandatory = $true,
-            Position = 1
-        )]
-        [string]$To,
-
-        [Parameter(
-            Mandatory = $true,
-            Position = 2,
-            ValueFromPipeline = $true
-        )]
-        [string]$String
-    )
-    begin {
-        $Error.Clear()
-        $encFrom = [System.Text.Encoding]::GetEncoding($from)
-        $encTo = [System.Text.Encoding]::GetEncoding($to)
-        if ($Error) {
-            break
-        }
-    }
-    process {
-        $bytes = $encTo.GetBytes($String)
-        $bytes = [System.Text.Encoding]::Convert($encFrom, $encTo, $bytes)
-        $encTo.GetString($bytes)
-    }
-}
 
 
 
@@ -881,116 +779,6 @@ function Send-WOL {
 
 
 ##############################################################
-####                Translit string en → ru               ####
-##############################################################
-function Get-Translit {
-    param (
-        [Parameter(Mandatory = $true)]
-        [AllowEmptyString()]
-        [string]$String
-    )
-
-    if (!$String) {
-        return
-    }
-
-    $CyrArr = @("а","б","в","г","д","е","ё", "ж", "з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч", "ш", "щ",  "ъ","ы","ь","э","ю", "я",`
-                "А","Б","В","Г","Д","Е","Ё", "Ж", "З","И","Й","К","Л","М","Н","О","П","Р","С","Т","У","Ф","Х","Ц","Ч", "Ш", "Щ",  "Ъ","Ы","Ь","Э","Ю", "Я",`
-                "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",`
-                "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",`
-                "_","0","1","2","3","4","5","6","7","8","9")
-    
-    $LatArr = @("a","b","v","g","d","e","jo","zh","z","i","y","k","l","m","n","o","p","r","s","t","u","f","h","c","ch","sh","sch","y","y","", "e","yu","ya",`
-                "A","B","V","G","D","E","Jo","Zh","Z","I","Y","K","L","M","N","O","P","R","S","T","U","F","H","C","Ch","Sh","Sch","Y","Y","", "E","Yu","Ya",`
-                "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",`
-                "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",`
-                "_","0","1","2","3","4","5","6","7","8","9")
-
-    $TransVoc = @()
-    $i=0
-    for ($i = 0; $i -lt $CyrArr.Count; $i++) {
-        $TransCharObj = New-Object psobject | Select-Object @{n="Cyr";e={$CyrArr[$i]}},@{n="Lat";e={$LatArr[$i]}}
-        $TransVoc += $TransCharObj              
-    }
-    
-    
-    $AllChars=$String.ToCharArray()
-
-    foreach ($Char in $AllChars) {
-        if ($Char -match "\w") {
-            $TransChar = ($TransVoc | Where-Object {$PSItem.Cyr -ceq $Char}).Lat
-        }
-        else {
-            $TransChar = $Char
-        }
-
-        if (($Prevchar -notmatch "\w") -or ($Prevchar -match "_") -or ($Prevchar -match "\d")) {
-            switch -CaseSensitive ($TransChar) {
-                'h' {$TransChar = 'kh'}
-                'H' {$TransChar = 'Kh'}
-                Default {}
-            }
-        }
-        $Prevchar = $TransChar
-        $TransString += $TransChar
-    }
-    $TransString = $TransString -replace "yy$","y"
-
-    return [string]$TransString
-}
-
-
-
-
-
-##############################################################
-####                 Generate random password             ####
-##############################################################
-function New-Password {
-    param (
-        [Parameter()]
-        [ValidateRange(7,[int]::MaxValue)]
-        [int]$Length = 10,
-
-        [ValidateRange(0,[int]::MaxValue)]
-        [int]$SpecChar = 0,
-
-        [ValidateRange(0,4)]
-        [int]$Conditions = 4
-    )
-        
-    $CharacterList = @()
-    $Symbols = '!@#$%^&*()-_=+<>'.ToCharArray()
-    
-    $CharacterList += 65..90 | ForEach-Object {[char]$_}
-    $CharacterList += 97..122 | ForEach-Object {[char]$_}
-    $CharacterList += 0..9
-    $CharacterList += $Symbols
-    
-    do {
-        $Passwd = ""
-        # for ($i = 0; $i -lt $Length; $i++) {
-        #     $RandomIndex = [System.Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $CharacterList.Length)
-        #     $Passwd += $CharacterList[$RandomIndex]
-        # }
-        0..$Length | ForEach-Object {
-            $Passwd += $CharacterList | Get-Random 
-        }
-
-        [int]$hasLowerChar = $Passwd -cmatch '[a-z]'
-        [int]$hasUpperChar = $Passwd -cmatch '[A-Z]'
-        [int]$hasDigit = $Passwd -match '[0-9]'
-        [int]$hasSymbol = $Passwd.IndexOfAny($Symbols) -ne -1
-
-    }
-    until (($hasLowerChar + $hasUpperChar + $hasDigit + $hasSymbol) -ge $Conditions)
-
-    return $Passwd
-}
-
-
-
-##############################################################
 ####            Resize pictire for AD intedration         ####
 ##############################################################
 function Get-ResizedPicture {
@@ -1138,33 +926,6 @@ function New-IPScope {
 
 
 
-##############################################################
-####                Limit string from the end              ####
-##############################################################
-
-function Limit-String {
-    param (
-        [Parameter(
-            Mandatory = $true,
-            Position = 0
-        )]
-        [int]$Limit,
-
-        [Parameter(
-            Mandatory = $true,
-            Position = 1,
-            ValueFromPipeline = $true
-        )]
-        [string]$String
-    )
-    
-    if ($String.Length -gt $Limit) {
-        return [string]::Join('',$String[($String.Length - $Limit)..($String.Length - 1)])
-    }
-    else {
-        return [string]$String
-    }   
-}
 
 
 
@@ -1418,57 +1179,6 @@ function Get-InventoryInfo {
 
 
 
-
-
-
-
-##############################################################
-####                 Convert string to hex                ####
-##############################################################
-function Convert-StringToHex {
-    [cmdletbinding()]
-    param(
-        [Parameter(
-            Mandatory=$true,
-            Position = 0
-        )]
-        [string]$String
-    )
-    [Byte[]]$Bytes = $String.ToCharArray()
-    $HexString = [System.Text.StringBuilder]::new($Bytes.Length * 2)
-    foreach ($Byte in $Bytes) {
-        $HexString.AppendFormat("{0:x2}", $Byte) | Out-Null
-    }
-    return $HexString.ToString()
-}
-
-
-
-
-##############################################################
-####                 Convert string to hex                ####
-##############################################################
-function Convert-HexToString {
-    [CmdletBinding()]
-    param (
-        [Parameter(
-            Mandatory=$true,
-            Position = 0
-        )]
-        [String]$HexString
-    )
-    $Bytes = [byte[]]::new($HexString.Length / 2)
-
-    for ($i=0; $i -lt $HexString.Length; $i+=2) {
-        $Bytes[$i/2] = [convert]::ToByte($HexString.Substring($i, 2), 16)
-    }
-
-    $String = [char[]]$Bytes -join ''
-    return $String
-}
-
-
-
 ##############################################################
 ####               Delay restarting servers               ####
 ##############################################################
@@ -1595,81 +1305,6 @@ function Test-Port {
 
 
 
-##############################################################
-####              Get password experation date            ####
-##############################################################
-function Get-PasswordExperationDate {
-    [CmdletBinding()]
-    param (
-        # Username list
-        [Parameter(
-            Mandatory = $true,
-            ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 0
-        )]
-        [string[]]$SamAccountName,
-
-        # Domain to search. Own at default
-        [Parameter(
-            Mandatory = $false
-        )]
-        [string]$Domain = ($env:USERDNSDOMAIN).ToLower()
-    )
-    
-    begin {
-        Import-Module ActiveDirectory
-        $Result = @()
-        Write-Debug "Begin done"
-    }
-    
-    process {
-        foreach ($User in $SamAccountName) {
-            Write-Debug "Processing $User"
-            try {
-                $ADUser = Get-ADUser -Identity $User -Properties PasswordLastSet,msDS-UserPasswordExpiryTimeComputed,PasswordNeverExpires,Enabled
-            }
-            catch {
-                Write-Error -Message "User $User not found in domain $Domain" `
-                    -Category ObjectNotFound `
-                    -RecommendedAction "Check if username existing." `
-                    -TargetObject "$User" `
-                    -ErrorId 1
-                continue
-            }
-
-            Set-StrictMode -Version Latest
-            $Result += [PSCustomObject]@{
-                Name = $ADUser.Name
-                SamAccountName = $ADUser.SamAccountName
-                Enabled = $ADUser.Enabled
-                PasswordLastSet = $ADUser.PasswordLastSet
-                PasswordExpires = & {
-                    try {
-                        [datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed") 
-                    }
-                    catch {
-                        [DateTime]::MaxValue
-                    }
-                }
-                DaysLeft = & {
-                    try {
-                        ([datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed") - (Get-Date)).Days
-                    } 
-                    catch {
-                        -1
-                    }
-                }
-                PasswordNeverExpires = $ADUser.PasswordNeverExpires
-            }
-            Set-StrictMode -Off
-        }
-    }
-    
-    end {
-        return $Result
-    }
-}
 
 
 
