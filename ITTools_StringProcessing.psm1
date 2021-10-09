@@ -254,18 +254,6 @@ function Get-Translit {
         $TransDict.Add('э','e')
         $TransDict.Add('ю','yu')
         $TransDict.Add('я','ya')
-
-        $ExtraCases = @(
-            # [TranslitCase]::new(BaseSymbol, Shift, RegEx, Translit)
-            [TranslitCase]::new('е',-1,'[ъь]','ye')
-            [TranslitCase]::new('ё',-1,'[жчшщ]','o')
-            [TranslitCase]::new('и',-1,'[ъь]','yi')
-            # [TranslitCase]::new(BaseSymbol, Position, Shift, RegEx, Translit)
-            [TranslitCase]::new('и',-2,1,'[й]','')
-            # [TranslitCase]::new(BaseSymbol, Position, Translit)
-            [TranslitCase]::new('х',0,'kh')
-            [TranslitCase]::new('ы',-2,1,'[й]','')
-        )
     }
 
     process {
@@ -273,57 +261,95 @@ function Get-Translit {
             return $null
         }
 
-        Write-Verbose '==========================================='
+        Write-Verbose '===================================================='
         Write-Verbose "PROCESSING WORD : $String"
-        Write-Verbose '-------------------------------------------'
+        Write-Verbose '----------------------------------------------------'
         $TransString = ''
 
         for ($i = 0; $i -lt $String.Length; $i++) {
+            $VerboseString = ("SYMBOL $i").PadRight(12,' ') + " : $($String[$i]) :    "
+
             if ($TransDict.Keys -notcontains $String[$i]) {
                 $TransString += $String[$i]
-                Write-Verbose "Not modified. Transsymbol : $($String[$i])"
+                Write-Verbose ($VerboseString + "Not modified. Transsymbol : $($String[$i])")
                 continue
             }
 
-            $ExtraCase = $false
-
-            Write-Verbose "SYMBOL $i : $($String[$i])"
-
-            foreach ($Case in $ExtraCases) {
-                
-
-                if (
-                    $String[$i] -eq $Case.BaseSymbol -and 
-                    $String[$i + $Case.Shift] -match $Case.RegEx -and
-                    (
-                        (
-                            (($Case.Shift + $i) -ge 0) -and 
-                            ($Case.SymbolPosition -eq [int]::MinValue)
-                        ) -or 
-                        (
-                            $Case.SymbolPosition -eq $i
-                        ) -or
-                        (
-                            ($String.Length + $Case.SymbolPosition) -eq $i
-                        )
-                    )
-                ) {
-                    foreach ($Property in $Case.psobject.Properties.Name) {
-                        Write-Verbose "$($Property.PadRight(16,' ')):$($Case.$Property)"
+            switch ($String[$i]) {
+               'е' {
+                    if (
+                        ($i -ne 0) -and 
+                        ($String[$i - 1] -match "[ъь]")
+                    ) {
+                        $TransSymbol = 'ye'
                     }
-                    
-                    $TransSymbol = $Case.TransSymbol
-                    Write-Verbose "Extra case found. Transsymbol : $TransSymbol"
-                    $ExtraCase = $true
-                    break            
                 }
+
+               'ё' {
+                    if (
+                        ($i -ne 0) -and 
+                        ($String[$i - 1] -match "[жчшщ]")
+                    ) {
+                        $TransSymbol = 'o'
+                    }
+                }
+
+                'и' {
+                    if (
+                        ($i -ne 0) -and 
+                        ($String[$i - 1] -match "[ъь]")
+                    ) {
+                        $TransSymbol = 'yi'
+                    }
+                    elseif (
+                        ($String[$i + 1] -match "й") -and 
+                        # https://www.regular-expressions.info/unicode.html
+                        (
+                            ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
+                            ($i + 2 -eq $String.Length)
+                        )
+                    ) {
+                        $TransSymbol = ''
+                    }
+                }
+                
+                'х' {
+                    if (
+                        ($i -eq 0) -or 
+                        ($String[$i - 1] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]")
+                    ) {
+                        $TransSymbol = 'kh'
+                    }
+
+                }
+                
+                'ы' {
+                    if (
+                        ($String[$i + 1] -match "й") -and 
+                        # https://www.regular-expressions.info/unicode.html
+                        (
+                            ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
+                            ($i + 2 -eq $String.Length)
+                        )
+                    ) {
+                        $TransSymbol = ''
+                    }
+                }
+
+                Default {}
             }
 
-            if (!$ExtraCase) {
+            try {
+                [void](Get-Variable -Name 'TransSymbol' -ErrorAction Stop)
+                $VerboseString += 'Special case. '
+            } 
+            catch {
                 $TransSymbol = $TransDict[([string]$String[$i]).ToLower()]
-                Write-Verbose "Regular case. Transsymbol : $TransSymbol"
+                $VerboseString += 'Regular case. '
             }
-            
+
+
+            # For uppercase
             if ($String[$i] -cmatch ([string]$String[$i]).ToUpper()) {
 
                 for ($j = 0; $j -lt $TransSymbol.Length; $j++) {
@@ -338,9 +364,11 @@ function Get-Translit {
             else {
                 $TransString += $TransSymbol
             }
-            
+            $VerboseString += "Transsymbol : $TransSymbol"
+            Write-Verbose $VerboseString
+            Remove-Variable -Name 'TransSymbol'
         }
-        Write-Verbose '=================================================='
+        Write-Verbose '===================================================='
     }
     end {
         return $TransString
