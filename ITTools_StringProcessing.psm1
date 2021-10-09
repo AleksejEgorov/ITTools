@@ -256,15 +256,15 @@ function Get-Translit {
         $TransDict.Add('я','ya')
 
         $ExtraCases = @(
-            # [TraslitCase]::new(BaseSymbol, Shift, RegEx, Translit)
-            [TraslitCase]::new('е',-1,'[ъь]','ye')
-            [TraslitCase]::new('ё',-1,'[жчшщ]','o')
-            [TraslitCase]::new('и',-1,'[ъь]','yi')
-            # [TraslitCase]::new(BaseSymbol, Position, Shift, RegEx, Translit)
-            [TraslitCase]::new('и',-2,1,'[й]','')
-            # [TraslitCase]::new(BaseSymbol, Position, Translit)
-            [TraslitCase]::new('х',0,'kh')
-            [TraslitCase]::new('ы',-2,1,'[й]','')
+            # [TranslitCase]::new(BaseSymbol, Shift, RegEx, Translit)
+            [TranslitCase]::new('е',-1,'[ъь]','ye')
+            [TranslitCase]::new('ё',-1,'[жчшщ]','o')
+            [TranslitCase]::new('и',-1,'[ъь]','yi')
+            # [TranslitCase]::new(BaseSymbol, Position, Shift, RegEx, Translit)
+            [TranslitCase]::new('и',-2,1,'[й]','')
+            # [TranslitCase]::new(BaseSymbol, Position, Translit)
+            [TranslitCase]::new('х',0,'kh')
+            [TranslitCase]::new('ы',-2,1,'[й]','')
         )
     }
 
@@ -279,6 +279,12 @@ function Get-Translit {
         $TransString = ''
 
         for ($i = 0; $i -lt $String.Length; $i++) {
+            if ($TransDict.Keys -notcontains $String[$i]) {
+                $TransString += $String[$i]
+                Write-Verbose "Not modified. Transsymbol : $($String[$i])"
+                continue
+            }
+
             $ExtraCase = $false
 
             Write-Verbose "SYMBOL $i : $($String[$i])"
@@ -316,10 +322,6 @@ function Get-Translit {
             if (!$ExtraCase) {
                 $TransSymbol = $TransDict[([string]$String[$i]).ToLower()]
                 Write-Verbose "Regular case. Transsymbol : $TransSymbol"
-                if (!$TransSymbol) {
-                    $TransSymbol = $String[$i]
-                    Write-Verbose "Not modified. Transsymbol : $TransSymbol"
-                }
             }
             
             if ($String[$i] -cmatch ([string]$String[$i]).ToUpper()) {

@@ -12,7 +12,7 @@
 RootModule = 'ITtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.16.0.57'
+ModuleVersion = '1.16.0.58'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()

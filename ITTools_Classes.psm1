@@ -268,14 +268,14 @@ class ProcessInvocationResult {
     }
 }
 
-class TraslitCase {
+class TranslitCase {
     [char]$BaseSymbol
     [int]$SymbolPosition
     [int]$Shift
     [string]$RegEx
     [string]$TransSymbol
 
-    TraslitCase (
+    TranslitCase (
         [char]$bs,
         [int]$sp,
         [string]$ts
@@ -287,7 +287,7 @@ class TraslitCase {
         $this.TransSymbol = $ts
     }
 
-    TraslitCase (
+    TranslitCase (
         [char]$bs,
         [int]$shft,
         [string]$re,
@@ -300,7 +300,7 @@ class TraslitCase {
         $this.TransSymbol = $ts
     }
 
-    TraslitCase (
+    TranslitCase (
         [char]$bs,
         [int]$pos,
         [int]$shft,
