@@ -1,4 +1,4 @@
-using namespace System.Collections.Generic
+﻿using namespace System.Collections.Generic
 using namespace Microsoft.ActiveDirectory.Management
 
 ##############################################################
@@ -42,6 +42,8 @@ function Get-ADUserByName {
             Position = 2
         )]
         [string]$SearchBase = "$(([adsi]'').distinguishedName)",
+
+        [string]$Server = (& {Get-ADDomainController}).HostName,
 
         [switch]$ByDisplayName,
         
@@ -197,9 +199,12 @@ function Get-ADUserByName {
             Write-Verbose "FILTER  : $NameFilter"
             $ADUsers = [Microsoft.ActiveDirectory.Management.ADUser[]](
                 Get-ADUser -Filter (
-                    "(objectClass -eq 'user') -and " + 
-                    $NameFilter
-                ) -Properties $Properties -SearchBase $SearchBase
+                        "(objectClass -eq 'user') -and " + 
+                        $NameFilter
+                    ) `
+                    -Properties $Properties `
+                    -SearchBase $SearchBase `
+                    -Server $Server
             )
 
             if ($ValidOnly) {
@@ -234,7 +239,9 @@ function Get-ADUserGroups {
         [string[]]$UserName,
         
         [Parameter(Mandatory = $false)]
-        [switch]$AsObject
+        [switch]$AsObject,
+
+        [string]$Server = (& {Get-ADDomainController}).HostName
     )
 
     begin {
@@ -244,7 +251,7 @@ function Get-ADUserGroups {
     process {
         foreach ($User in $UserName) {
             try {
-                $ADUser = Get-ADUser $User -Properties MemberOf -ErrorAction Stop
+                $ADUser = Get-ADUser $User -Properties MemberOf -Server $Server -ErrorAction Stop
             }
             catch {
                 Write-Warning "User $User not found in $env:USERDOMAIN."
@@ -255,7 +262,7 @@ function Get-ADUserGroups {
 
             $Groups = New-Object 'List[ADGroup]'
             foreach ($Group in $GroupList) {
-                $Groups += Get-ADGroup -Identity $Group
+                $Groups += Get-ADGroup -Identity $Group -Server $Server
             }
             $UserResult = [PSCustomObject]@{
                 User = $ADUser
@@ -301,7 +308,9 @@ function Get-ADParent {
         [Parameter(
             Mandatory = $false
         )]
-        [string[]]$Properties = @('Name','description')
+        [string[]]$Properties = @('Name','description'),
+
+        [string]$Server = (& {Get-ADDomainController}).HostName
     )
 
     begin {
@@ -316,15 +325,15 @@ function Get-ADParent {
     process {
         foreach ($ObjectName in $Identity) {
             try {
-                $TargetADObject = Get-ADObject $ObjectName -ErrorAction Stop
+                $TargetADObject = Get-ADObject $ObjectName -Server $Server -ErrorAction Stop
             }
             catch {
                 try {
-                    $TargetADObject = Get-ADUser $ObjectName -ErrorAction Stop
+                    $TargetADObject = Get-ADUser $ObjectName -Server $Server -ErrorAction Stop
                 }
                 catch {
                     try {
-                        $TargetADObject = Get-ADComputer $ObjectName -ErrorAction Stop            
+                        $TargetADObject = Get-ADComputer $ObjectName -Server $Server -ErrorAction Stop
                     }
                     catch {
                         continue
@@ -334,7 +343,7 @@ function Get-ADParent {
             
         
             $ParentObjectDN = ([adsi]"LDAP://$TargetADObject").Parent.Replace('LDAP://','')
-            return (Get-ADObject -Identity $ParentObjectDN -Properties $Properties)
+            return (Get-ADObject -Identity $ParentObjectDN -Properties $Properties -Server $Server)
         }
     }
     end {}   
@@ -363,7 +372,9 @@ function Test-ADGroupMembership {
         [string[]]$SamAccountName,
 
         # Define addition. If no — check only
-        [Switch]$Add
+        [Switch]$Add,
+
+        [string]$Server = (& {Get-ADDomainController}).HostName
         
     )
     begin {
@@ -379,8 +390,8 @@ function Test-ADGroupMembership {
         foreach ($User in $SamAccountName) {
             $GroupList = @()
             try {
-                $GroupList += (Get-ADUser $User -Properties MemberOf -ErrorAction Stop).MemberOf | ForEach-Object {
-                    (Get-ADGroup $PSItem)
+                $GroupList += (Get-ADUser $User -Properties MemberOf -Server $Server -ErrorAction Stop).MemberOf | ForEach-Object {
+                    (Get-ADGroup $PSItem -Server $Server)
                 }
             }
 
@@ -396,7 +407,7 @@ function Test-ADGroupMembership {
             }
             else {
                 if ($Add) {
-                    Add-ADGroupMember -Identity $Group -Members $User
+                    Add-ADGroupMember -Identity $Group -Members $User -Server $Server
                     Write-Host "ADDED" -ForegroundColor Yellow | Out-Host
                 }
                 else {
@@ -444,18 +455,20 @@ function Get-ADLockSource {
             Position = 0,
             ValueFromPipeline = $true)]
         [string[]]
-        $UserName
+        $UserName,
+
+        [string]$Server = (& {Get-ADDomainController}).HostName
     )
     
     begin {
-        $PDC = (Get-AdDomain).PDCEmulator
+        $PDC = (Get-AdDomain -Server $Server).PDCEmulator
         $Result = @()
     }
     
     process {
         foreach ($User in $UserName) {
             try {
-                $null = Get-ADUser "$User"
+                $null = Get-ADUser "$User" -Server $Server
             }
             catch {
                 Write-Host "$User not found!" -ForegroundColor Red -BackgroundColor Black
@@ -508,7 +521,9 @@ function Get-PasswordExperationDate {
         [Parameter(
             Mandatory = $false
         )]
-        [string]$Domain = ($env:USERDNSDOMAIN).ToLower()
+        [string]$Domain = ($env:USERDNSDOMAIN).ToLower(),
+
+        [string]$Server = (& {Get-ADDomainController}).HostName
     )
     
     begin {
@@ -521,7 +536,7 @@ function Get-PasswordExperationDate {
         foreach ($User in $SamAccountName) {
             Write-Debug "Processing $User"
             try {
-                $ADUser = Get-ADUser -Identity $User -Properties PasswordLastSet,msDS-UserPasswordExpiryTimeComputed,PasswordNeverExpires,Enabled
+                $ADUser = Get-ADUser -Identity $User -Properties PasswordLastSet,msDS-UserPasswordExpiryTimeComputed,PasswordNeverExpires,Enabled -Server $Server
             }
             catch {
                 Write-Error -Message "User $User not found in domain $Domain" `
