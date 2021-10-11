@@ -528,7 +528,7 @@ function Export-Excel {
             break
         }
         else {
-            Write-Host "Export done to: `n$SaveAsPath" -ForegroundColor Green 
+            Write-Host "Export done to: `n$SaveAsPathNR" -ForegroundColor Green 
         }
 
         if ($Show) {

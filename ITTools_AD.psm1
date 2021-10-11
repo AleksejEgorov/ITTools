@@ -579,3 +579,64 @@ function Get-PasswordExperationDate {
         return $Result
     }
 }
+
+function Get-GPOStatus {
+    [CmdletBinding()]
+    param (
+        [string]$RegEx = '^.*$',
+        [string]$Server = (& {Get-ADDomainController}).HostName
+    )
+    
+    begin {
+        $AllGPOs = Get-GPO -All -Server $Server | Where-Object {$PSItem.DisplayName -match $RegEx}
+        $Result = New-Object 'List[psobject]'
+        $i = 0
+    }
+    
+    process {
+        foreach ($GPO in $AllGPOs) {
+
+            Write-Progress -Activity 'Processing policy'-Status $GPO.DisplayName -PercentComplete (($i++/ $AllGPOs.Count) * 100) -CurrentOperation "$i of $($AllGPOs.Count)"
+
+            $Active = $false
+            $Reason = ''
+            $GPOReport = ([xml](Get-GPOReport -Guid $GPO.Id.Guid -ReportType Xml -Server $Server)).GPO
+
+            if (($GPO.Computer.DSVersion -eq 0) -and ($GPO.User.DSVersion -eq 0)) {
+                $Reason = 'Empty'
+            }
+            elseif (!$GPOReport.LinksTo) {
+                $Reason = 'NotLinked'
+            }
+            elseif (!($GPOReport.LinksTo | Where-Object {$PSItem.Enabled})) {
+                $Reason = 'LinksDisabled'
+            }
+            elseif (!$GPO.Computer.Enabled -and !$GPO.User.Enabled) {
+                $Reason = 'Disabled'
+            }
+            else {
+                $Active = $true
+            }
+
+            $Result.Add(
+                [PSCustomObject]@{
+                    Name = $GPOReport.Name
+                    Guid = $GPO.Id.Guid
+                    Created = $GPO.CreationTime
+                    Modified = $GPO.ModificationTime
+                    Description = $GPO.Description
+                    WmiFilter = $GPO.WmiFilter.Name
+                    Links = $GPOReport.LinksTo.SOMPath
+                    Active = $Active
+                    Reason = $Reason
+                }
+            )
+            
+        }
+        
+    }
+    
+    end {
+        return $Result
+    }
+}
