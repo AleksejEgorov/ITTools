@@ -195,7 +195,7 @@ function New-Password {
         [int]$hasLowerChar = $Passwd -cmatch '[a-z]'
         [int]$hasUpperChar = $Passwd -cmatch '[A-Z]'
         [int]$hasDigit = $Passwd -match '[0-9]'
-        [int]$hasSymbol = $Passwd.IndexOfAny($Symbols) -ne -1
+        [int]$hasSymbol = $Passwd -match '[\p{P}\p{S}]'
 
     }
     until (($hasLowerChar + $hasUpperChar + $hasDigit + $hasSymbol) -ge $Conditions)
