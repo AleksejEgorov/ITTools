@@ -1,5 +1,6 @@
 ﻿using namespace System.Collections.Generic
 using namespace Microsoft.ActiveDirectory.Management
+using module .\ITTools_Classes.psm1
 
 ##############################################################
 ####    Search user in ActiveDirectory by displayname     ####
@@ -639,4 +640,74 @@ function Get-GPOStatus {
     end {
         return $Result
     }
+}
+
+
+function Get-ADDomainInfo {
+    [CmdletBinding()]
+    param (
+        # Domains list
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [Alias('DnsRoot')]
+        [string]$Domain,
+
+        # Friendly name
+        [Parameter(
+            Mandatory = $false,
+            Position = 1
+        )]
+        [Alias('FriendlyName')]
+        [string]$Prefix
+    )
+    
+    if (!$Prefix) {
+        $Prefix = $Domain.Split('.')[0].ToUpperInvariant()
+    }
+    return [DomainSummaryInfo]::new($Prefix,$Domain)
+}
+
+function New-ADStructure {
+    [CmdletBinding()]
+    param (
+        # Input array of OUs
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true
+        )]
+        [OU[]]$OUs,
+
+        # Where to create OUs
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [string]$DNPath
+    )
+
+    begin {}
+    
+    process {
+        foreach ($OU in $OUs) {
+            if (!(Get-ADOrganizationalUnit -SearchBase $DNPath -SearchScope OneLevel -Filter "Name -eq '$($OU.Name)'")) {
+                New-ADOrganizationalUnit -Name $OU.Name -Path $DNPath -Description $OU.Description
+                Write-Verbose "Created OU $($OU.Name) in $DNPath"
+            }
+            else {
+                Write-Verbose "OU $($OU.Name) exists in $DNPath"
+            }
+            if ($OU.Child) {
+                if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
+                    New-ADStructure -OUs $OU.Child -DNPath "OU=$($OU.Name),$DNPath" -Verbose
+                }
+                else {
+                    New-ADStructure -OUs $OU.Child -DNPath "OU=$($OU.Name),$DNPath"
+                }
+            }
+        }
+    }
+    end {}
 }

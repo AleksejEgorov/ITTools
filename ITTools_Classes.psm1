@@ -1,3 +1,7 @@
+using namespace System.DirectoryServices.ActiveDirectory
+using namespace System.Collections.Generic
+
+
 class DiskInfo {
     [string]$Status
     [int]$Index
@@ -265,5 +269,120 @@ class ProcessInvocationResult {
             $proc.StandardError.ReadToEnd().Split("`n"),
             $proc.ExitCode
         )
+    }
+}
+
+class OU {
+    [string]$Name
+    [string]$Description
+    [OU[]]$Child
+
+    OU() {
+        $this.Name = ''
+        $this.Description = ''
+        $this.Child = @()
+    }
+
+    OU(
+        [string]$nm,
+        [string]$dscr
+    ) {
+        $this.Name = $nm
+        $this.Description = $dscr
+        $this.Child = @()
+    }
+
+    OU(
+        [string]$nm,
+        [string]$dscr,
+        [OU[]]$chld 
+    ) {
+        $this.Name = $nm
+        $this.Description = $dscr
+        $this.Child = $chld
+    }
+}
+
+
+class DomainSummaryInfo {
+    [string]$Prefix
+    [string]$FQDN
+    [DomainController[]]$DomainControllers
+    [Dictionary[[string],[DomainController]]]$FSMO
+    [psobject[]]$DNSServers
+    [psobject[]]$DHCPServers
+
+    DomainSummaryInfo() {
+        $this.Prefix = [string]::new('')
+        $this.FQDN = [string]::new('')
+        $this.DomainControllers = [DomainController[]]::new($null)
+        $this.FSMO = [Dictionary[[string],[string]]]::new()
+        $this.FSMO.Add('SchemaMaster',$null)
+        $this.FSMO.Add('DomainNamingMaster',$null)
+        $this.FSMO.Add('PDCEmulator',$null)
+        $this.FSMO.Add('RIDMaster',$null)
+        $this.FSMO.Add('InfrastructureMaster',$null)
+        $this.DNSServers = [psobject[]]::new($null)
+        $this.DHCPServers = [psobject[]]::new($null)
+    }
+
+    DomainSummaryInfo([string]$pre, [string]$dmn) {
+        $this.Prefix = [string]::new($pre)
+        $this.FQDN = [string]::new($dmn)
+
+        [DirectoryContext]$DomainContext = [DirectoryContext]::new([DirectoryContextType]::Domain,$dmn)
+        [Domain]$Domain = [Domain]::GetDomain($DomainContext)
+
+        if ($Domain.Parent) {
+            $ForestName = $Domain.Parent            
+        }
+        else {
+            $ForestName = $Domain.Name
+        }
+
+        [DirectoryContext]$ForestContext = [DirectoryContext]::new([DirectoryContextType]::Forest,$ForestName)
+        [Forest]$Forest = [Forest]::GetForest($ForestContext)        
+        $this.DomainControllers = $Domain.DomainControllers
+        $this.FSMO = [Dictionary[[string],[DomainController]]]::new()
+        $this.FSMO.Add('SchemaMaster',$Forest.SchemaRoleOwner)
+        $this.FSMO.Add('DomainNamingMaster',$Forest.NamingRoleOwner)
+        $this.FSMO.Add('PDCEmulator',$Domain.PdcRoleOwner)
+        $this.FSMO.Add('RIDMaster',$Domain.RidRoleOwner)
+        $this.FSMO.Add('InfrastructureMaster',$Domain.InfrastructureRoleOwner)
+
+        $Resolve = Resolve-DnsName -name $dmn -Type 'NS'
+        $this.DNSServers = [psobject[]]::new($null)
+        foreach ($Record in ($Resolve | Where-Object Type -eq 'NS')) {
+            $this.DNSServers += [PSCustomObject]@{
+                Name = $Record.NameHost
+                IPv4Address = ($Resolve | Where-Object {($PSItem.QueryType -eq 'A') -and ($PSItem.Name -eq $Record.NameHost)}).IP4Address
+            }
+        }
+
+        $FoundDHCPServers = [psobject[]]::new($null)
+        [string]$ConfigDN = ([adsi]"LDAP://$ForestName/RootDSE").configurationNamingContext | ForEach-Object {return $PSItem}
+        $Searcher = [adsisearcher]'(&(objectClass=dHCPClass)(!(name=DhcpRoot)))'
+        $Searcher.SearchRoot = "LDAP://$ForestName/$ConfigDN"
+        $ADSIResult = $Searcher.FindAll()
+        foreach ($Server in $ADSIResult) {
+            $ServerInfo = $Server.GetDirectoryEntry()
+            $DhcpInfo = $ServerInfo.dhcpServers[0]
+            
+            # now for a little regex magic
+            $IP = [regex]::Match($DhcpInfo, '^i(.+?)\$').Groups[1].Value
+            
+            try {
+                [string]$Name = $ServerInfo.Name[0] 
+            }
+            catch {
+                $Name = [string]::new('')                
+            }
+            
+            $FoundDHCPServers += [PSCustomObject]@{
+                Name = $Name
+                IPv4Address = $IP
+            }
+        }
+        $this.DHCPServers = $FoundDHCPServers
     }
 }
