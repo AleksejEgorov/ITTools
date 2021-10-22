@@ -648,11 +648,11 @@ function Get-ADDomainInfo {
     param (
         # Domains list
         [Parameter(
-            Mandatory = $true,
+            Mandatory = $false,
             Position = 0
         )]
         [Alias('DnsRoot')]
-        [string]$Domain,
+        [string]$Domain = $env:USERDNSDOMAIN,
 
         # Friendly name
         [Parameter(
