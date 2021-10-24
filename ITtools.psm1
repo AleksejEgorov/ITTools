@@ -1865,7 +1865,7 @@ function Update-ModuleVersion {
 ##############################################################
 ####      Connect to exchange server via powershell       ####
 ##############################################################
-function Connect-ExchangeServer {
+function New-ExchangeSession {
     param (
         # Exchange server FQDN.
         [Parameter(
@@ -1906,14 +1906,19 @@ function Connect-ExchangeServer {
     }
     $OpenedExSess = Get-PSSession | Where-Object {($PSItem.ComputerName -eq $ExchangeServer) -and ($PSItem.State -eq "Opened")}
     if (!$OpenedExSess) {
-        $Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos
+        $global:Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos
     }
     else {
-        $Exchange = $OpenedExSess[0]
+        $global:Exchange = $OpenedExSess[0]
     }
-    Import-PSSession $Exchange -DisableNameChecking -AllowClobber
+    Write-Host "Session opened." 
+    Write-Host "Now invoke: " -NoNewline
+    Write-Host 'Import-PSSession ' -ForegroundColor Yellow -NoNewline
+    Write-Host '$Exchange ' -ForegroundColor Green -NoNewline
+    Write-Host '-DisableNameChecking -AllowClobber' -ForegroundColor DarkGray
+    Write-Host ''
+    return $global:Exchange
 }
-
 
 
 ##############################################################
