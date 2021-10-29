@@ -688,7 +688,12 @@ function New-ADStructure {
         [string]$DNPath
     )
 
-    begin {}
+    begin {
+        $CurrentDomain = Get-ADDomain
+        if ((Get-CimInstance -ClassName Win32_ComputerSystem).Domain -ne $CurrentDomain.DnsRoot) {
+            $PSDefaultParameterValues = @{"*-AD*:Server"=$CurrentDomain.DnsRoot}
+        }
+    }
     
     process {
         foreach ($OU in $OUs) {
