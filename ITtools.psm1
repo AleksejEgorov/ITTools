@@ -1906,7 +1906,12 @@ function New-ExchangeSession {
     }
     $OpenedExSess = Get-PSSession | Where-Object {($PSItem.ComputerName -eq $ExchangeServer) -and ($PSItem.State -eq "Opened")}
     if (!$OpenedExSess) {
-        $global:Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos
+        try {
+            $global:Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos                
+        }
+        catch {
+            throw $Error[0].Exception.Message
+        }
     }
     else {
         $global:Exchange = $OpenedExSess[0]
