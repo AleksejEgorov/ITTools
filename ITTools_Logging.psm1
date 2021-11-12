@@ -107,10 +107,23 @@ function Write-CMLog {
             $LogSuccess = $true
         }
         catch {
-            $Error.RemoveAt(0)                
+            $AttemptsLeft--
+            if ($Error -and ($AttemptsLeft -ne 0)) {
+                $Error.RemoveAt(0)                
+            }
             Start-Sleep -Milliseconds (Get-Random (10..99))
         }
-        $AttemptsLeft--
+    }
+    if ($Error -and ($AttemptsLeft -eq 0)) {
+        Write-Error -Message $Error[0].Exception.Message `
+            -Category $Error[0].CategoryInfo.Category `
+            -CategoryActivity $Error[0].CategoryInfo.Activity `
+            -CategoryReason $Error[0].CategoryInfo.Reason`
+            -CategoryTargetName $Error[0].CategoryInfo.TargetName`
+            -CategoryTargetType $Error[0].CategoryInfo.TargetType `
+            -ErrorId $Error[0].FullyQualifiedErrorId `
+            -TargetObject $Error[0].TargetObject `
+            -Exception $Error[0].Exception
     }
 }
 
@@ -705,7 +718,6 @@ function Get-IASLog {
        $FormattedBaseOutput | Format-Table Date-Time, Username, Workstation-MAC, SwitchIP, NPS-Policy-Name, Packet-Type, Reason-Code -AutoSize
     }   
 }
-
 
 function Get-NpsLog {
     param (
