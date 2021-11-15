@@ -1,6 +1,4 @@
-﻿using module .\ITTools_Classes.psm1
-
-##############################################################
+﻿##############################################################
 ####                 Convert string to hex                ####
 ##############################################################
 function Convert-StringToHex {
@@ -87,7 +85,7 @@ function Test-EmailValidation {
         [string]$EmailAddress
     )
 
-    $MailRegex = "^[a-zA-Z0-9\-\._]*@[a-zA-Z0-9\-_.]*\.[a-zA-Z]{2,5}$"
+    $MailRegex = "^[a-zA-Z0-9\-_.]{1,}@[a-zA-Z0-9\-_.]{1,}\.[a-zA-Z]{2,5}$"
     # If real e-mail
     if ($EmailAddress -match $MailRegex) {
         return $EmailAddress
@@ -220,7 +218,7 @@ function Get-Translit {
     )
 
     begin {
-        $TransDict = New-Object "System.Collections.Generic.Dictionary[[char],[string]]"
+        $TransDict = [System.Collections.Generic.Dictionary[[char],[string]]]::new()
         $TransDict.Add('а','a')
         $TransDict.Add('б','b')
         $TransDict.Add('в','v')
@@ -326,8 +324,8 @@ function Get-Translit {
                 'ы' {
                     if (
                         ($String[$i + 1] -match "й") -and 
-                        # https://www.regular-expressions.info/unicode.html
                         (
+                            # https://www.regular-expressions.info/unicode.html
                             ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
                             ($i + 2 -eq $String.Length)
                         )
