@@ -108,22 +108,22 @@ function Write-CMLog {
         }
         catch {
             $AttemptsLeft--
-            if ($Error -and ($AttemptsLeft -ne 0)) {
-                $Error.RemoveAt(0)                
-            }
+            # if ($Error -and ($AttemptsLeft -ne 0)) {
+            $global:Error.RemoveAt(0)
+            # }
             Start-Sleep -Milliseconds (Get-Random (10..99))
         }
     }
-    if ($Error -and ($AttemptsLeft -eq 0)) {
-        Write-Error -Message $Error[0].Exception.Message `
-            -Category $Error[0].CategoryInfo.Category `
-            -CategoryActivity $Error[0].CategoryInfo.Activity `
-            -CategoryReason $Error[0].CategoryInfo.Reason`
-            -CategoryTargetName $Error[0].CategoryInfo.TargetName`
-            -CategoryTargetType $Error[0].CategoryInfo.TargetType `
-            -ErrorId $Error[0].FullyQualifiedErrorId `
-            -TargetObject $Error[0].TargetObject `
-            -Exception $Error[0].Exception
+    if (!$LogSuccess) {
+        Write-Error -Message $global:Error[0].Exception.Message `
+            -Category $global:Error[0].CategoryInfo.Category `
+            -CategoryActivity $global:Error[0].CategoryInfo.Activity `
+            -CategoryReason $global:Error[0].CategoryInfo.Reason`
+            -CategoryTargetName $global:Error[0].CategoryInfo.TargetName`
+            -CategoryTargetType $global:Error[0].CategoryInfo.TargetType `
+            -ErrorId $global:Error[0].FullyQualifiedErrorId `
+            -TargetObject $global:Error[0].TargetObject `
+            -Exception $global:Error[0].Exception
     }
 }
 
