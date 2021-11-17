@@ -1887,18 +1887,18 @@ function New-ExchangeSession {
         
         foreach ($Member in $ExchangeServersGroup) {
             $ExchSearcher = [adsisearcher]"(&(objectClass=computer)(distinguishedName=$Member))"
-            $null = $ExchSearcher.PropertiesToLoad.Add('dNSHostName')
-            try {
-                $ExchangeServers += $ExchSearcher.FindOne().GetDirectoryEntry().dNSHostName
+            [void]($ExchSearcher.PropertiesToLoad.Add('dNSHostName'))
+            $ExchangeSearchResult = $ExchSearcher.FindOne()
+            if ($ExchangeSearchResult) {
+                $ExchangeServers += $ExchangeSearchResult.GetDirectoryEntry().dNSHostName
                 Write-Verbose "$Member is exchange server."
             }
-            catch {
+            else {
                 Write-Verbose "$Member is not server."
             }
         }
         $ExchangeServer = $ExchangeServers[0]
     }
-        
 
     $DegrExSess = Get-PSSession | Where-Object {($ComputerName -eq $ExchangeServer) -and ($PSItem.State -ne "Opened")}
     if ($DegrExSess) {
@@ -1916,12 +1916,7 @@ function New-ExchangeSession {
     else {
         $global:Exchange = $OpenedExSess[0]
     }
-    Write-Host "Session opened." 
-    Write-Host "Now invoke: " -NoNewline
-    Write-Host 'Import-PSSession ' -ForegroundColor Yellow -NoNewline
-    Write-Host '$Exchange ' -ForegroundColor Green -NoNewline
-    Write-Host '-DisableNameChecking -AllowClobber' -ForegroundColor DarkGray
-    Write-Host ''
+
     return $global:Exchange
 }
 
