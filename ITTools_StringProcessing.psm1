@@ -393,8 +393,8 @@ function New-TranslitRegex {
                     $String -replace 'e','..?' `
                         -replace 'ё','.?e' `
                         -replace 'ж','..?' `
-                        -replace 'ый','(i|y|iy|ij|yi)' `
-                        -replace 'ий','(i|y|iy|ij|yi)' `
+                        -replace 'ый','(i|y|iy|ij|yi|yy)' `
+                        -replace 'ий','(i|y|iy|ij|yi|yy)' `
                         -replace 'и','.?i' `
                         -replace 'й','.' `
                         -replace 'х','.?h' `
