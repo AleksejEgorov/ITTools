@@ -391,15 +391,15 @@ function New-TranslitRegex {
             Get-Translit (
                 '^' + (
                     $String -replace 'e','..?' `
-                        -replace 'ё','.?e' `
+                        -replace 'ё','.?(e|o)' `
                         -replace 'ж','..?' `
                         -replace 'ый','(i|y|iy|ij|yi|yy)' `
                         -replace 'ий','(i|y|iy|ij|yi|yy)' `
-                        -replace 'и','.?i' `
+                        -replace 'и','.?(i|y)' `
                         -replace 'й','.' `
                         -replace 'х','.?h' `
-                        -replace 'ц','..?.?' `
-                        -replace 'ш','s.?ch' `
+                        -replace 'ц','(с|tz|ts|tc)' `
+                        -replace 'щ','s.?c?h' `
                         -replace 'ы','.' `
                         -replace 'э','.?e' `
                         -replace 'ю','.?u' `
