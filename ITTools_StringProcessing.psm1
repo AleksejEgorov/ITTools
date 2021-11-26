@@ -372,3 +372,41 @@ function Get-Translit {
         return $TransString
     }
 }
+
+
+function New-TranslitRegex {
+    [CmdletBinding()]
+    param (
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true
+        )]
+        [string[]]$InputString
+    )
+
+    begin {}
+    process {
+        foreach ($String in $InputString) {
+            Get-Translit (
+                '^' + (
+                    $String -replace 'e','..?' `
+                        -replace 'ё','.?e' `
+                        -replace 'ж','..?' `
+                        -replace 'и','.?i' `
+                        -replace 'й','.' `
+                        -replace 'х','.?h' `
+                        -replace 'ц','..?.?' `
+                        -replace 'ш','s.?ch' `
+                        -replace 'ы','.' `
+                        -replace 'э','.?e' `
+                        -replace 'ю','.?u' `
+                        -replace 'я','.?a' `
+                        -replace 'кс','(ks|x)' `
+                        -replace ' ','\s+'
+                ) + '$'
+            )
+        }
+    }
+    end {}
+}
