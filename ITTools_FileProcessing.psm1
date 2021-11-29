@@ -276,3 +276,45 @@ function New-TestFile {
         
     }
 }
+
+
+function Get-FolderSize {
+    [CmdletBinding()]
+    Param (
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('FullName')]
+        [string]$Path,
+
+        [Parameter()]
+        [Alias('h')]
+        [switch]$HumanFriendly
+    )
+
+    begin {}
+
+    process {
+        if ((Test-Path $Path) -and (Get-Item $Path).PSIsContainer) {
+            $Measure = Get-ChildItem $Path -Recurse -Force -File | Measure-Object -Property Length -Sum
+            if ($Measure) {
+                $Result = @{
+                    'Path' = $Path
+                }
+                
+                if ($HumanFriendly) {
+                    $Result.Add('Size (GB)',('{0:N2}' -f ($Measure.Sum / 1Gb)))
+                }
+                else {
+                    $Result.Add('Size',$Measure.Sum)
+                }
+            }
+            [PSCustomObject]$Result
+        }
+    }
+    
+    end {}
+}
