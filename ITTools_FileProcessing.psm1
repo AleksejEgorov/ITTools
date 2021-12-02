@@ -288,7 +288,7 @@ function Get-FolderSize {
             ValueFromPipelineByPropertyName = $true
         )]
         [Alias('FullName')]
-        [string]$Path,
+        [string[]]$FolderPath,
 
         [Parameter()]
         [Alias('h')]
@@ -298,23 +298,24 @@ function Get-FolderSize {
     begin {}
 
     process {
-        if ((Test-Path $Path) -and (Get-Item $Path).PSIsContainer) {
-            $Measure = Get-ChildItem $Path -Recurse -Force -File | Measure-Object -Property Length -Sum
-            if ($Measure) {
-                $Result = @{
-                    'Path' = $Path
+        foreach ($Path in $FolderPath) {
+            if ((Test-Path $Path) -and (Get-Item $Path).PSIsContainer) {
+                $Measure = Get-ChildItem $Path -Recurse -Force -File | Measure-Object -Property Length -Sum
+                if ($Measure) {
+                    $Result = @{
+                        'Path' = $Path
+                    }
+                    
+                    if ($HumanFriendly) {
+                        $Result.Add('Size (GB)',('{0:N2}' -f ($Measure.Sum / 1Gb)))
+                    }
+                    else {
+                        $Result.Add('Size',$Measure.Sum)
+                    }
                 }
-                
-                if ($HumanFriendly) {
-                    $Result.Add('Size (GB)',('{0:N2}' -f ($Measure.Sum / 1Gb)))
-                }
-                else {
-                    $Result.Add('Size',$Measure.Sum)
-                }
+                [PSCustomObject]$Result
             }
-            [PSCustomObject]$Result
         }
     }
-    
     end {}
 }
