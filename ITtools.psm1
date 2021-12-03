@@ -1692,6 +1692,7 @@ function Update-ScriptVersion {
             catch {
                 Write-Warning "$FileItem has no version info!"
             }
+            Write-Verbose "Current version : $CurrentVersion"
             if ($CurrentVersion) {
                 [int]$RevisionVer = $CurrentVersion.Revision + 1
                 [int]$BuildVer = $CurrentVersion.Build
@@ -1717,23 +1718,32 @@ function Update-ScriptVersion {
                     $RevisionVer
                 )
 
+
                 # Update-ScriptFileInfo -Path $FileItem.FullName -Version $NewVersion -Force
                 $ScriptContent = Get-Content -Path $FileItem.FullName -Raw
-                $ScriptContent -match "^\s*<#PSScriptInfo\s*[\s\w\.\-\\\/\|\[\],@:;'`"<>=+_()*&^%$#]*#>\s*"
+                [void]($ScriptContent -match "\s*<#PSScriptInfo(.|\n|\r)[^<]+#>")
                 $InfoBlock = $Matches[0]
 
-                $UpdatedInfoBlock = $InfoBlock `
-                    -replace `
-                        "\.VERSION\s(\d{1,}\.){3}(\d{1,})`r`n",`
-                        ".VERSION $($NewVersion.ToString())`r`n" `
-                        -replace `
-                            "\.RELEASENOTES\s*[\s\w\.\-\\\/\|\[\],@:;'`"<>=+_()*&^%$#]*#>\s*<#",`
-                            ".RELEASENOTES`n$((Get-Date).ToString('dd.MM.yyyy HH:mm'))`n$ReleaseNotes`n`n#>`n`n<#"
-                   
+                Write-Verbose $InfoBlock
+                Write-Verbose "New version : $NewVersion"
+
+                [void]($InfoBlock -match "\.RELEASENOTES(.|\n|\r)*#>")
+                $CurrentReleaseNotes = $Matches[0]
+
+                if ($ReleaseNotes) {
+                    $UpdatedReleaseNotes = $CurrentReleaseNotes -replace "\.RELEASENOTES",".RELEASENOTES`n$((Get-Date).ToString('dd.MM.yyyy HH:mm')) : $ReleaseNotes"    
+                }
+                else {
+                    $UpdatedReleaseNotes = $CurrentReleaseNotes
+                }
+
+                $UpdatedInfoBlock = $InfoBlock -replace "\.VERSION\s(\d+\.){3}(\d+)",".VERSION $($NewVersion.ToString())" `
+                    -replace "\.RELEASENOTES(.|\n|\r)*#>",$UpdatedReleaseNotes
                 
-                $ScriptContent -replace `
-                    "^\s*<#PSScriptInfo\s*[\s\w\.\-\\\/\|\[\],@:;'`"<>=+_()*&^%$#]*#>\s*",`
-                    $UpdatedInfoBlock | 
+                
+                Write-Verbose $UpdatedInfoBlock
+
+                ($ScriptContent -replace "\s*<#PSScriptInfo(.|\n|\r)[^<]+#>",$UpdatedInfoBlock).Trim() | 
                         Out-File $FileItem.FullName -Encoding utf8 -Force
                 
             }
