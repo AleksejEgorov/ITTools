@@ -1671,7 +1671,7 @@ function Update-ScriptVersion {
         [switch]$Minor,
 
         [Parameter()]
-        [switch]$Build,
+        [switch]$Patch,
 
         [Parameter(
             Mandatory = $false,
@@ -1695,18 +1695,18 @@ function Update-ScriptVersion {
             Write-Verbose "Current version : $CurrentVersion"
             if ($CurrentVersion) {
                 [int]$RevisionVer = $CurrentVersion.Revision + 1
-                [int]$BuildVer = $CurrentVersion.Build
+                [int]$PatchVer = $CurrentVersion.Build
                 [int]$MinorVer = $CurrentVersion.Minor
                 [int]$MajorVer = $CurrentVersion.Major
-                if ($Build) {
-                    $BuildVer++
+                if ($Patch) {
+                    $PatchVer++
                 }
                 if ($Minor) {
-                    $BuildVer = 0
+                    $PatchVer = 0
                     $MinorVer++
                 }
                 if ($Major) {
-                    $BuildVer = 0
+                    $PatchVer = 0
                     $MinorVer = 0
                     $MajorVer++
                 }
@@ -1714,7 +1714,7 @@ function Update-ScriptVersion {
                 $NewVersion = [System.Version]::new(
                     $MajorVer,
                     $MinorVer,
-                    $BuildVer,
+                    $PatchVer,
                     $RevisionVer
                 )
 
@@ -1776,7 +1776,7 @@ function Update-ModuleVersion {
         [switch]$Minor,
 
         [Parameter()]
-        [switch]$Build,
+        [switch]$Patch,
 
         [Parameter(
             Mandatory = $false,
@@ -1820,18 +1820,18 @@ function Update-ModuleVersion {
             Write-Debug "Variables defined"
             if ($CurrentVersion) {
                 [int]$RevisionVer = $CurrentVersion.Revision + 1
-                [int]$BuildVer = $CurrentVersion.Build
+                [int]$PatchVer = $CurrentVersion.Build
                 [int]$MinorVer = $CurrentVersion.Minor
                 [int]$MajorVer = $CurrentVersion.Major
-                if ($Build) {
-                    $BuildVer++
+                if ($Patch) {
+                    $PatchVer++
                 }
                 if ($Minor) {
-                    $BuildVer = 0
+                    $PatchVer = 0
                     $MinorVer++
                 }
                 if ($Major) {
-                    $BuildVer = 0
+                    $PatchVer = 0
                     $MinorVer = 0
                     $MajorVer++
                 }
@@ -1839,7 +1839,7 @@ function Update-ModuleVersion {
                 $NewVersion = [System.Version]::new(
                     $MajorVer,
                     $MinorVer,
-                    $BuildVer,
+                    $PatchVer,
                     $RevisionVer
                 )
                 Write-Verbose $NewVersion 
