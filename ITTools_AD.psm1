@@ -716,3 +716,51 @@ function New-ADStructure {
     }
     end {}
 }
+
+
+function Get-ADGroupUsers {
+    [CmdletBinding()]
+    param (
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [string[]]$Name,
+
+        # AD user properties
+        [Parameter(
+            Mandatory = $false,
+            Position = 1
+        )]
+        [string[]]$Properties = @(
+            'EmailAddress',
+            'Description',
+            'Company',
+            'Department',
+            'Title',
+            'info'
+        ),
+
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [string]$Domain = (& {Get-ADDomain}).DnsRoot
+    )
+
+    begin {}
+
+    process {
+        foreach ($GroupName in $Name) {
+            foreach ($Member in (Get-ADGroupMember $GroupName -Recursive -Server $Domain)) {
+                $MemberDomain = ($Member.DistinguishedName -replace ",DC=",'!').Split('!')
+                $MemberDomain = $MemberDomain[1..($domain.Length - 1)] -join '.'
+                Get-ADUser -Identity $Member.SamAccountName -Server $MemberDomain -Properties $Properties
+            }
+        }
+    }
+
+    end {}
+}
