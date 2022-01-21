@@ -702,6 +702,7 @@ function New-ADStructure {
                 Write-Verbose "Created OU $($OU.Name) in $DNPath"
             }
             else {
+                Set-ADOrganizationalUnit -Identity "OU=$($OU.Name),$DNPath" -Description $OU.Description
                 Write-Verbose "OU $($OU.Name) exists in $DNPath"
             }
             if ($OU.Child) {
