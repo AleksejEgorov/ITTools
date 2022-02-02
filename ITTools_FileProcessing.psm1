@@ -319,3 +319,91 @@ function Get-FolderSize {
     }
     end {}
 }
+
+
+function Import-JsonSettings {
+    [CmdletBinding()]
+    param (
+        # Properties list
+        [Parameter(
+            Mandatory = $false,
+            Position = 0,
+            ValueFromPipeline
+        )]
+        [string[]]$Properties,
+
+        # Json config path
+        [Parameter(
+            Mandatory = $true,
+            Position = 2
+        )]
+        [string]$JsonPath
+    )
+
+    begin {
+        try {
+            $global:Settings = Get-Content -Path $JsonPath -Raw | ConvertFrom-JSON
+        }
+        catch {
+            throw "Cannot import json file $JsonPath. $($Error[0].Exception.Message) Invocation stopped."
+        }
+        if (!$Properties) {
+            $Properties = $global:Settings.psobject.Properties.Name        
+        }
+        $VerboseObject = @()
+    }
+
+    process {
+        
+        foreach ($Property in $Properties) {
+            $Value = $Settings.$Property
+            # Requested propery must be defined.
+            if ($null -eq $Value) {
+                throw "Property $Property is not defined in json file $JsonPath. Invocation stopped."
+            }
+
+            # PSCustomObject to hashtable
+            if ($Value -and ($Value.GetType() -eq [System.Management.Automation.PSCustomObject])) {
+                $ValueObject = $Value
+                
+                $Value = [hashtable]::new()
+                foreach ($NoteProperty in $ValueObject.psobject.Properties.name) {
+                    $Value.Add($NoteProperty,$ValueObject.$NoteProperty)
+                }
+            }
+
+            try {
+                New-Variable -Name $Property `
+                    -Value $Value `
+                    -Scope Global `
+                    -ErrorAction Stop         
+            }
+            catch [System.Management.Automation.SessionStateException] {
+                $global:Error.RemoveAt(0)
+                Set-Variable -Name $Property `
+                    -Value $Value `
+                    -Scope Global
+            }
+            
+            $VerboseObject += [PSCustomObject]@{
+                Variable = "Variable $Property is "
+                Value = $Value
+            }
+        }
+    }
+
+    end {
+        if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
+            $VarWidth = ($VerboseObject.Variable | ForEach-Object {$PSItem.Length} | Measure-Object -Maximum).Maximum + 1
+            
+            foreach ($Row in $VerboseObject) {
+                Write-Verbose -Message (
+                    ($Row.Variable).PadRight($VarWidth,' ') + 
+                    ': ' +
+                    $Row.Value
+                )
+            }
+        }
+        return
+    }
+}
