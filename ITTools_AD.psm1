@@ -47,12 +47,12 @@ function Get-ADUserByName {
         [string]$Server = (& {Get-ADDomainController}).HostName,
 
         [switch]$ByDisplayName,
-        
+
         [switch]$Strict,
 
         [switch]$ValidOnly
     )
-    
+
     begin {
         $SurnameAttribute = 'Surname'
         $GivennameAttribute = 'GivenName'
@@ -64,7 +64,7 @@ function Get-ADUserByName {
             Import-Module ActiveDirectory
         }
     }
-    
+
     process {
         foreach ($Record in $Name) {
             $RawName = $Record.Trim(' ') -replace "\s{2,}",' '
@@ -78,14 +78,14 @@ function Get-ADUserByName {
                         $NameFilter = "(displayName -eq '$RawName')"
                     }
                     else {
-                        $NameFilter = "(" +    
+                        $NameFilter = "(" +
                             "($SurnameAttribute -eq '$($RawNameParts[0])') -and " +
                             "($GivennameAttribute -eq '$($RawNameParts[1])') -and "+
                             "($MiddlenameAttribute -eq '$($RawNameParts[2])')" +
                         ")"
                     }
                     Write-Verbose "PATTERN : Surname GivenName MiddleName"
-                    break  
+                    break
                 }
 
                 # Фамилия И.О.
@@ -103,10 +103,10 @@ function Get-ADUserByName {
                         ")"
                     }
                     Write-Verbose "PATTERN : Surname G.M."
-                    break  
+                    break
                 }
 
-                # И.О.Фамилия 
+                # И.О.Фамилия
                 # И. О. Фамилия
                 "^([А-ЯЁ]\.\s{0,}){2}[А-ЯЁ][а-яё]{1,}$" {
                     $RawNameParts = $RawName.Split(' ').Split('.') | Where-Object {$PSItem}
@@ -121,16 +121,16 @@ function Get-ADUserByName {
                         ")"
                     }
                     Write-Verbose "PATTERN : G.M. Surname"
-                    break  
+                    break
                 }
-                    
+
 
                 # Имя Фамилия
                 # Фамилия Имя
                 "^[А-ЯЁ][а-яё]{1,}\s[А-ЯЁ][а-яё]{1,}$" {
                     $RawNameParts = $RawName.Split(' ') | Where-Object {$PSItem}
                     if ($ByDisplayName) {
-                        $NameFilter = "(" + 
+                        $NameFilter = "(" +
                             "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1]) *') -or " +
                             "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0]) *') -or " +
                             "(displayName -eq '$($RawNameParts[0]) $($RawNameParts[1])') -or " +
@@ -150,7 +150,7 @@ function Get-ADUserByName {
                         ")"
                     }
                     Write-Verbose "PATTERN : GivenName Surname"
-                    break  
+                    break
                 }
 
                 # И. Фамилия
@@ -158,7 +158,7 @@ function Get-ADUserByName {
                 "^([А-ЯЁ]\.\s?[А-ЯЁ][а-яё]{1,})|([А-ЯЁ][а-яё]{1,}\s[А-ЯЁ]\.)$" {
                     $RawNameParts = $RawName.Split(' ').Split('.') | Where-Object {$PSItem}
                     if ($ByDisplayName) {
-                        $NameFilter = "(" + 
+                        $NameFilter = "(" +
                             "(displayName -like '$($RawNameParts[0]) $($RawNameParts[1])*') -or " +
                             "(displayName -like '$($RawNameParts[0])* $($RawNameParts[1])') -or " +
                             "(displayName -like '$($RawNameParts[1]) $($RawNameParts[0])*') -or " +
@@ -178,29 +178,29 @@ function Get-ADUserByName {
                         ")"
                     }
                     Write-Verbose "PATTERN : G. Surname"
-                    break  
+                    break
                 }
                 default {
                     Write-Verbose "PATTERN : Unknown"
                     if (!$Strict) {
                         Write-Warning "Cannot parse $Record correctly! Searching directly by displayName"
-                        $NameFilter = "(displayName -like '*$RawName*')"                        
+                        $NameFilter = "(displayName -like '*$RawName*')"
                     }
                     else {
                         Write-Warning "Cannot parse $Record correctly!"
                         return $null
-                    }    
-                }     
+                    }
+                }
             }
 
-            if (!$NameFilter) { 
-                continue                
+            if (!$NameFilter) {
+                continue
             }
 
             Write-Verbose "FILTER  : $NameFilter"
             $ADUsers = [Microsoft.ActiveDirectory.Management.ADUser[]](
                 Get-ADUser -Filter (
-                        "(objectClass -eq 'user') -and " + 
+                        "(objectClass -eq 'user') -and " +
                         $NameFilter
                     ) `
                     -Properties $Properties `
@@ -210,7 +210,7 @@ function Get-ADUserByName {
 
             if ($ValidOnly) {
                 return (
-                    $ADUsers | 
+                    $ADUsers |
                     Where-Object {
                         ($PSItem.SamAccountName -match "^([a-zA-Z]{3}_)?([a-zA-Z]\.){2}[A-Z][a-z]{1,}$")
                     }
@@ -231,14 +231,14 @@ function Get-ADUserGroups {
     [CmdletBinding()]
     param (
         [Parameter(
-            Mandatory = $true, 
+            Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true
         )]
         [Alias("SamAccountName")]
         [string[]]$UserName,
-        
+
         [Parameter(Mandatory = $false)]
         [switch]$AsObject,
 
@@ -248,7 +248,7 @@ function Get-ADUserGroups {
     begin {
         $Result = New-Object 'Dictionary[string,psobject]'
     }
-    
+
     process {
         foreach ($User in $UserName) {
             try {
@@ -270,13 +270,13 @@ function Get-ADUserGroups {
                 Groups = $Groups
             }
             $Result.Add($User,$UserResult)
-            
+
         }
     }
 
     end {
         if ($AsObject) {
-            return $Result            
+            return $Result
         }
         else {
             foreach ($Record in $Result.Keys) {
@@ -341,13 +341,13 @@ function Get-ADParent {
                     }
                 }
             }
-            
-        
+
+
             $ParentObjectDN = ([adsi]"LDAP://$TargetADObject").Parent.Replace('LDAP://','')
             return (Get-ADObject -Identity $ParentObjectDN -Properties $Properties -Server $Server)
         }
     }
-    end {}   
+    end {}
 }
 
 ##############################################################
@@ -376,7 +376,7 @@ function Test-ADGroupMembership {
         [Switch]$Add,
 
         [string]$Server = (& {Get-ADDomainController}).HostName
-        
+
     )
     begin {
         Import-Module ActiveDirectory
@@ -398,10 +398,10 @@ function Test-ADGroupMembership {
 
             catch {
                 Write-Host "User not found!" -ForegroundColor red -BackgroundColor Black
-                continue 
+                continue
             }
             Write-Verbose "$User in $($GroupList.Count) groups : $($GroupList.Name)"
-    
+
             Write-Host "$User is in $GroupName : " -NoNewline
             if ($GroupList.Name -contains $Group.Name) {
                 Write-Host "TRUE" -ForegroundColor Green | Out-Host
@@ -415,7 +415,7 @@ function Test-ADGroupMembership {
                     Write-Host "FALSE" -ForegroundColor Red | Out-Host
                 }
             }
-        } 
+        }
     }
     end {}
 }
@@ -434,11 +434,11 @@ function Get-ADSiteServer {
         )]
         [Alias("Name")]
         [string[]]$Sites,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$Forest = $env:USERDNSDOMAIN
-    ) 
-    
+    )
+
     foreach ($Site in $Sites) {
         $ForestObject = New-object System.DirectoryServices.ActiveDirectory.DirectoryContext("Forest", "$Forest")
         $SiteObject = [System.DirectoryServices.ActiveDirectory.Forest]::GetForest($ForestObject).Sites | Where-Object {$PSItem.Name -eq $Site}
@@ -460,12 +460,12 @@ function Get-ADLockSource {
 
         [string]$Server = (& {Get-ADDomainController}).HostName
     )
-    
+
     begin {
         $PDC = (Get-AdDomain -Server $Server).PDCEmulator
         $Result = @()
     }
-    
+
     process {
         foreach ($User in $UserName) {
             try {
@@ -496,7 +496,7 @@ function Get-ADLockSource {
             }
         }
     }
-    
+
     end {
         return $Result
     }
@@ -526,13 +526,13 @@ function Get-PasswordExperationDate {
 
         [string]$Server = (& {Get-ADDomainController}).HostName
     )
-    
+
     begin {
         Import-Module ActiveDirectory
         $Result = @()
         Write-Debug "Begin done"
     }
-    
+
     process {
         foreach ($User in $SamAccountName) {
             Write-Debug "Processing $User"
@@ -556,7 +556,7 @@ function Get-PasswordExperationDate {
                 PasswordLastSet = $ADUser.PasswordLastSet
                 PasswordExpires = & {
                     try {
-                        [datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed") 
+                        [datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed")
                     }
                     catch {
                         [DateTime]::MaxValue
@@ -565,7 +565,7 @@ function Get-PasswordExperationDate {
                 DaysLeft = & {
                     try {
                         ([datetime]::FromFileTime($ADUser."msDS-UserPasswordExpiryTimeComputed") - (Get-Date)).Days
-                    } 
+                    }
                     catch {
                         -1
                     }
@@ -575,7 +575,7 @@ function Get-PasswordExperationDate {
             Set-StrictMode -Off
         }
     }
-    
+
     end {
         return $Result
     }
@@ -585,15 +585,16 @@ function Get-GPOStatus {
     [CmdletBinding()]
     param (
         [string]$RegEx = '^.*$',
-        [string]$Server = (& {Get-ADDomainController}).HostName
+        [string]$Server = (& {Get-ADDomain}).DNSRoot,
+        [string]$Domain = $Server
     )
-    
+
     begin {
-        $AllGPOs = Get-GPO -All -Server $Server | Where-Object {$PSItem.DisplayName -match $RegEx}
+        $AllGPOs = Get-GPO -All -Server $Server -Domain $Domain | Where-Object {$PSItem.DisplayName -match $RegEx}
         $Result = New-Object 'List[psobject]'
         $i = 0
     }
-    
+
     process {
         foreach ($GPO in $AllGPOs) {
 
@@ -601,7 +602,7 @@ function Get-GPOStatus {
 
             $Active = $false
             $Reason = ''
-            $GPOReport = ([xml](Get-GPOReport -Guid $GPO.Id.Guid -ReportType Xml -Server $Server)).GPO
+            $GPOReport = ([xml](Get-GPOReport -Guid $GPO.Id.Guid -ReportType Xml -Server $Server -Domain $Domain)).GPO
 
             if (($GPO.Computer.DSVersion -eq 0) -and ($GPO.User.DSVersion -eq 0)) {
                 $Reason = 'Empty'
@@ -632,11 +633,11 @@ function Get-GPOStatus {
                     Reason = $Reason
                 }
             )
-            
+
         }
-        
+
     }
-    
+
     end {
         return $Result
     }
@@ -662,7 +663,7 @@ function Get-ADDomainInfo {
         [Alias('FriendlyName')]
         [string]$Prefix
     )
-    
+
     if (!$Prefix) {
         $Prefix = $Domain.Split('.')[0].ToUpperInvariant()
     }
@@ -694,7 +695,7 @@ function New-ADStructure {
             $PSDefaultParameterValues = @{"*-AD*:Server"=$CurrentDomain.DnsRoot}
         }
     }
-    
+
     process {
         foreach ($OU in $OUs) {
             if (!(Get-ADOrganizationalUnit -SearchBase $DNPath -SearchScope OneLevel -Filter "Name -eq '$($OU.Name)'")) {
