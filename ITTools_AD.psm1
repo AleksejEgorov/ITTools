@@ -610,7 +610,7 @@ function Get-GPOStatus {
             elseif (!$GPOReport.LinksTo) {
                 $Reason = 'NotLinked'
             }
-            elseif (!($GPOReport.LinksTo | Where-Object {$PSItem.Enabled})) {
+            elseif (!($GPOReport.LinksTo | Where-Object {$PSItem.Enabled -eq $true})) {
                 $Reason = 'LinksDisabled'
             }
             elseif (!$GPO.Computer.Enabled -and !$GPO.User.Enabled) {
