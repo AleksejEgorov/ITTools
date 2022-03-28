@@ -20,7 +20,7 @@ function Get-LogonServer {
 
     Import-Module ActiveDirectory
     # Create result object
-    $Result = @() 
+    $Result = @()
     foreach ($Computer in $ComputerName) {
         # Get current loged in user. If no — all fields are empty
         try {
@@ -34,7 +34,7 @@ function Get-LogonServer {
                 Domain = ''
             }
         }
-        
+
 
         # Get current loged in user's SID from AD. If no — it's local user.
         try {
@@ -84,17 +84,17 @@ function Connect-DWClient {
     # Test target PC availability
     try {
         Test-Connection $Target -Count 1 -ErrorAction Stop
-    } 
+    }
     catch {
         Write-Host "Host is unavaliable." -ForegroundColor Red -BackgroundColor Black
         return
     }
 
-    # Change remote registry service start mode to auto and run it 
+    # Change remote registry service start mode to auto and run it
     cmd /c "sc \\$Target config remoteregistry start=auto"
     cmd /c "sc \\$Target start remoteregistry"
 
-    # Change registry: 
+    # Change registry:
     # allowing dameware service to start in safe mode
     reg add "\\$Target\HKLM\SYSTEM\CurrentControlSet\Control\SafeBoot\Network\dwmrcs" /t REG_SZ /d Service /f
 
@@ -135,7 +135,7 @@ function Connect-VNCClient {
         )]
         [string]$Computername
     )
-    
+
     Start-Process "$env:ProgramFiles\UltraVNC\vncviewer.exe" -ArgumentList "-connect $using:Computername -autoscaling -user $env:USERNAME"
 }
 
@@ -156,7 +156,7 @@ function Get-BPStagingQuota {
         [Parameter(Mandatory = $false)]
         [int]$Flows = 32
     )
-    
+
     $i = 1
     # Get all files.
     $Content = @()
@@ -165,10 +165,10 @@ function Get-BPStagingQuota {
             $Content += $PSItem
             Write-Progress -Activity "Counting file $($PSItem.name)" -Status "Total files: $i"
             $i++
-        } 
-        
+        }
+
     # Select biggest and measure average size
-    $MaxSizeFiles = $Content | 
+    $MaxSizeFiles = $Content |
         Sort-Object Length -Descending |
         Select-Object -First $Flows |
         ForEach-Object {$PSItem.Length / 1MB}
@@ -199,7 +199,7 @@ function Wait-Reboot {
         [switch]
         $MonitorOnly
     )
-    
+
     $Rebooted = @()
     $AttemptsRemaining = [System.Math]::Round(($WaitSeconds / 2),0)
 
@@ -210,14 +210,14 @@ function Wait-Reboot {
             Write-Host "$($Computer): " -NoNewline
             Write-Host "OFFLINE" -ForegroundColor Gray
         }
-    }   
+    }
 
     $StartTime = Get-Date
     if (!$MonitorOnly) {
         Write-Host "Reboot started..." -ForegroundColor Gray
         Restart-Computer $NotRebooted -Force
     }
-    
+
     do {
         $Rebooted += Invoke-Command -ComputerName $NotRebooted -ScriptBlock {
             $TimeStamp = Get-WmiObject Win32_OperatingSystem | Select-Object -ExpandProperty LastBootUpTime
@@ -239,7 +239,7 @@ function Wait-Reboot {
             Write-Host "$($Computer): " -NoNewline
             Write-Host "FAIL!" -ForegroundColor Red
         }
-    }        
+    }
 }
 
 
@@ -272,10 +272,10 @@ function Unblock-RDP {
                 Write-Host "Host is unavaliable." -ForegroundColor Red -BackgroundColor Black
                 break
             }
-        
+
             # Enable remote desktop
             $TermServ.SetAllowTSConnections(1,1)
-            
+
             # Allow connections from all computers
             # $TermServ.SetUserAuthenticationRequired(0)
         }
@@ -293,7 +293,7 @@ function Export-Excel {
     .SYNOPSIS
     Export powershell object to Excel file
     .DESCRIPTION
-    Export powershell object (or object array) to Excel file 
+    Export powershell object (or object array) to Excel file
     .NOTES
     Author: Egorov.Aleksej.v@gmail.com
     .INPUTS
@@ -301,24 +301,24 @@ function Export-Excel {
     .OUTPUTS
     None. Export-Excel returns nothing.
     .PARAMETER Properties
-    Selected property list 
+    Selected property list
     .PARAMETER InputObject
     Any PSObject or ovject array to export.
     .PARAMETER Name
-    Friendly name for file and worksheet. 
+    Friendly name for file and worksheet.
     Default: PowerShell.
     .PARAMETER AddColumns
-    Additional columns — not existion properties 
+    Additional columns — not existion properties
     .PARAMETER Show
     Оpen and show you file
     .PARAMETER ExportTo
-    Path for export. 
+    Path for export.
     Default: Desktop. Folder redirection is supported.
     .PARAMETER Passwd
     Make file password-protected. String parameter.
     .PARAMETER NotReplace
     Allow to add new file, if file with the same name are existing.
-    
+
 
     .EXAMPLE
     Get-ChildItem C:\ | Export-Excel
@@ -350,7 +350,7 @@ function Export-Excel {
         # Define list of adding properties
         [Parameter(Mandatory = $false)]
         [string[]]$AddColumns,
-        
+
         # Only show file, without saving
         [Parameter(Mandatory = $false)]
         [switch]$Show,
@@ -358,7 +358,7 @@ function Export-Excel {
         # Define file destination
         [Parameter(Mandatory = $false)]
         [string]$ExportTo,
-        
+
         # Define file name
         [Parameter(Mandatory = $false)]
         [string]$Name,
@@ -377,7 +377,7 @@ function Export-Excel {
         if (!$Name) {
             $Name = 'PowerShell'
         }
-         
+
         # Create excel file
         $Excel = New-Object -ComObject Excel.Application
         $Excel.Visible = $false
@@ -386,14 +386,14 @@ function Export-Excel {
         $Report = $WorkBook.Worksheets.Item(1)
         $Report.Name = "$Name report"
         $ProcessObject = @()
-    }    
-        
+    }
+
     process {
         foreach ($Object in $InputObject) {
             $ProcessObject += $Object
         }
     }
-    
+
     end {
         # Define input object properties list
         if (!$ProcessObject) {
@@ -402,7 +402,7 @@ function Export-Excel {
         }
 
         Write-Debug "Processing object is ready"
-        
+
         $AllPropetries = $ProcessObject | Get-Member -MemberType Properties | Select-Object -ExpandProperty Name
 
         $SelectedProperties = @()
@@ -419,11 +419,11 @@ function Export-Excel {
         if ($AddColumns) {
             foreach ($Field in $AddColumns) {
                 $SelectedProperties += $Field
-            }             
+            }
         }
 
         Write-Debug "Property list is ready"
-        
+
         # Push content
         $Column = 0
         foreach ($Property in $SelectedProperties) {
@@ -437,10 +437,10 @@ function Export-Excel {
             foreach ($Item in $ProcessObject) {
                 $Row++
                 try {
-                    $Report.Cells.Item($Row,$Column) = $Item.$Property    
+                    $Report.Cells.Item($Row,$Column) = $Item.$Property
                 }
                 catch {
-                    
+
                 }
             }
             Set-StrictMode -Off
@@ -455,7 +455,7 @@ function Export-Excel {
             $LastColumn += [char](64 + $FirstLetter)
         }
         $LastColumn += [char](64 + $SecondLetter)
-        
+
         $Headers = $Report.Range("A1","$($LastColumn)1")
         $Headers.Font.Bold = $true
         $Headers.Interior.ColorIndex = 15
@@ -475,7 +475,7 @@ function Export-Excel {
         }
 
         $Desktop = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name Desktop).Desktop
-        
+
         # Define export path
         if ($ExportTo -and ($ExportTo -ne "Default")) {
             try {
@@ -491,9 +491,9 @@ function Export-Excel {
         elseif ((!$ExportTo) -or ($ExportTo -eq "Default")) {
             $SaveAsFolder = "$Desktop"
         }
-        
+
         # Define full path
-        $FileName = "$Name-PSReport-" + (Get-Date -Format yyyy-MM-dd) + '.xlsx' 
+        $FileName = "$Name-PSReport-" + (Get-Date -Format yyyy-MM-dd) + '.xlsx'
         $SaveAsPath = Join-Path $SaveAsFolder -ChildPath $FileName
 
         # Prepare for saving
@@ -511,7 +511,7 @@ function Export-Excel {
         $missing = [System.Reflection.Missing]::Value
 
         $null = $WorkBook.SaveAs("$SaveAsPath",$missing,"$Passwd")
-        
+
 
         $TimeOut = 10
 
@@ -528,12 +528,12 @@ function Export-Excel {
             break
         }
         else {
-            Write-Host "Export done to: `n$SaveAsPathNR" -ForegroundColor Green 
+            Write-Host "Export done to: `n$SaveAsPathNR" -ForegroundColor Green
         }
 
         if ($Show) {
             $Excel.Visible = $true
-            
+
         }
         else {
             $Excel.Quit()
@@ -560,22 +560,22 @@ function Get-QWinSta {
         )]
         [string[]]$Servers = @("localhost")
     )
-    
+
     begin {
         $Result = @()
     }
-    
+
     process {
         foreach ($Server in $Servers) {
-            $QueryRes = qwinsta /server:$Server | ConvertTo-Encoding -From cp866 -To windows-1251 
+            $QueryRes = qwinsta /server:$Server | ConvertTo-Encoding -From cp866 -To windows-1251
             $QueryRes[0] = 'SessionName,UserName,ID,State,Type,Device,ComputerName'
             $ObjectRes = $QueryRes | ForEach-Object {
                 $Row = $PSItem
                 if (($PSItem -match "\d\s+Disc") -or ($PSItem -match "\d\s+Диск")) {
                     $Row = "none" + $Row
                 }
-                $Row.trim() -replace "\s+", "," 
-            } | ConvertFrom-Csv -Delimiter ',' 
+                $Row.trim() -replace "\s+", ","
+            } | ConvertFrom-Csv -Delimiter ','
             $ObjectRes | Where-Object {!$PSItem.State} | ForEach-Object {
                 $PSItem.State = $PSItem.ID
                 $PSItem.ID = $PSItem.UserName
@@ -588,7 +588,7 @@ function Get-QWinSta {
             $Result += $ObjectRes
         }
     }
-    
+
     end {
         return $Result
     }
@@ -613,32 +613,32 @@ function Get-LoggedInUsers {
         )]
         [DateTime]$After
     )
-    
+
     begin {
         $LoggedInUsers = @()
         $XmlDate = [Xml.XmlConvert]::ToString($After,[Xml.XmlDateTimeSerializationMode]::Utc)
         $XPath = "*[System[(EventID = 1149) and TimeCreated[(@SystemTime>'$XmlDate')]]]"
     }
-    
+
     process {
         foreach ($Server in $Servers) {
-            
+
             try {
                 $Events = Get-WinEvent -ComputerName $Server `
                     -LogName "Microsoft-Windows-TerminalServices-*" `
                     -FilterXPath $XPath `
-                    -ErrorAction Stop                
+                    -ErrorAction Stop
             }
             catch {
                 continue
             }
-            
+
             foreach ($Event in $Events) {
                 $LoggedInUsers += ([xml]$Event.ToXml()).Event.UserData.EventXML.Param1.Split('@')[0]
-            } 
+            }
         }
     }
-    
+
     end {
         return ($LoggedInUsers | Select-Object -Unique)
     }
@@ -662,13 +662,13 @@ function New-ShadowConnection {
     $Sessions = @()
     Get-QWinSta $ComputerName | Where-Object {$PSItem.State -eq "Active"} | ForEach-Object {$Sessions += $PSItem}
     if ($Sessions.count -gt 1) {
-        $Sessions | Select-Object ID,UserName | Out-Host  
+        $Sessions | Select-Object ID,UserName | Out-Host
         $SessionID = Read-Host "Type session ID"
     }
     else {
         $SessionID = $Sessions.ID
     }
-    
+
     $ArgList = @(
         "/v:$ComputerName",
         "/shadow:$SessionID",
@@ -686,7 +686,7 @@ function New-ShadowConnection {
 ##############################################################
 function Send-WOL {
     <#
-        .SYNOPSIS 
+        .SYNOPSIS
             Send a WOL packet to a broadcast address
         .PARAMETER MAC
         The MAC address of the device that need to wake up
@@ -708,7 +708,7 @@ function Send-WOL {
             "(^[a-f0-9\*]{1,12}$)|(^[a-f0-9\-\*]{1,14}$)|(^[a-f0-9\:\*]{1,17}$)|(^[a-f0-9\-\*]{1,17}$)"
         )]
         [string]$MAC,
-        
+
         [Parameter(
             Mandatory=$True,
             Position = 1,
@@ -734,11 +734,11 @@ function Send-WOL {
         [string]$IPAddress,
         [int]$Port = 9
     )
-    
+
 
     if (($Computername) -and ($ComputerName -notmatch "([0-9a-f]{2}[:\-]?){5}[0-9a-f]{2}")) {
         try {
-            $IPAddressFromDNS = (Resolve-DnsName $ComputerName -ErrorAction Stop).IPAddress            
+            $IPAddressFromDNS = (Resolve-DnsName $ComputerName -ErrorAction Stop).IPAddress
         }
         catch {
             Write-Error -Message "Can't resolve name to IP address. Please, try by MAC." -Category InvalidData -TargetObject "$ComputerName"
@@ -751,7 +751,7 @@ function Send-WOL {
         }
 
         try {
-            $MAC = (Get-DhcpServerv4Lease -ComputerName $DHCPServerName -ScopeId $ScopeID -ErrorAction Stop| Where-Object {$PSItem.IPAddress -eq $IPAddressFromDNS}).ClientId            
+            $MAC = (Get-DhcpServerv4Lease -ComputerName $DHCPServerName -ScopeId $ScopeID -ErrorAction Stop| Where-Object {$PSItem.IPAddress -eq $IPAddressFromDNS}).ClientId
         }
         catch {
             Write-Error -Message "Can't find IP lease on $DHCPServerName. Please, try by MAC." -Category InvalidData -TargetObject "$IPAddressFromDNS"
@@ -761,16 +761,16 @@ function Send-WOL {
 
     else {
         if (!$IPAddress) {
-            $IPAddress = "255.255.255.255"            
+            $IPAddress = "255.255.255.255"
         }
     }
-    
+
     $Broadcast = [Net.IPAddress]::Parse($IPAddress)
-    
+
     $MAC=(($MAC.Replace(":","")).Replace("-","")).Replace(".","")
     $Target=0,2,4,6,8,10 | ForEach-Object {[convert]::ToByte($MAC.Substring($PSItem,2),16)}
     $Packet = (,[byte]255 * 6) + ($Target * 16)
-    
+
     $UDPClient = New-Object System.Net.Sockets.UdpClient
     $UDPClient.Connect($Broadcast,$Port)
     [void]$UDPClient.Send($Packet, 102)
@@ -782,8 +782,8 @@ function Send-WOL {
 ####            Resize pictire for AD intedration         ####
 ##############################################################
 function Get-ResizedPicture {
-        
-    Param ( 
+
+    Param (
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
         [string]$ImageSource,
@@ -794,7 +794,7 @@ function Get-ResizedPicture {
 
         [Parameter(Mandatory=$true)]
         [ValidateNotNull()]
-        $Quality 
+        $Quality
     )
 
     # Check input
@@ -810,7 +810,7 @@ function Get-ResizedPicture {
         "Quality is out of range. 1..100 expected."
     }
 
-    # Import class 
+    # Import class
     [void][System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 
     $ImageBytes = [byte[]](Get-Content $ImageSource -Encoding byte)
@@ -876,11 +876,11 @@ function New-IPScope {
         [Parameter(mandatory=$true)][string]$Name,
         [Parameter(mandatory=$false)][string]$Description,
         [Parameter(mandatory=$false)][string]$DHCPServer,
-        
-        [Parameter(mandatory=$false)] 
+
+        [Parameter(mandatory=$false)]
         [ValidateRange(0,32)][int]$Mask = 24,
 
-        [Parameter(mandatory=$false)] 
+        [Parameter(mandatory=$false)]
         [ValidateRange(2,254)][int]$Start = 10,
 
         [Parameter(mandatory=$false)]
@@ -918,7 +918,7 @@ function New-IPScope {
         -Name $ScopeName `
         -Description $Description `
         -Type Dhcp
-    
+
     # Set regular options
     Set-DhcpServerv4OptionValue -ComputerName $DHCPServer -ScopeId $ScopeId -Router $Router
 }
@@ -948,22 +948,22 @@ function Get-InventoryInfo {
 
         [Parameter(Mandatory=$false)]
         [string]$ExportPath = "$HOME\Documents",
-        
+
         [Parameter()]
         [switch]$Csv,
 
         [Parameter()]
         [switch]$Json,
-        
+
         [Parameter()]
-        [switch]$Excel    
+        [switch]$Excel
     )
-    
+
 
     BEGIN {
         $InventoryTotal = @()
     }
-    
+
 
     PROCESS {
         ForEach ($Computer in $Computername)  {
@@ -973,7 +973,7 @@ function Get-InventoryInfo {
             $MachineInfo = New-Object -TypeName InventoryInfo
             # Checking remote machine avaliabelty
             try {
-                $CimSession = New-CimSession -ComputerName $Computer -Name $Computer  -ErrorAction Stop 
+                $CimSession = New-CimSession -ComputerName $Computer -Name $Computer  -ErrorAction Stop
             }
             catch {
                 $MachineInfo.Status = "Unavaliable"
@@ -994,7 +994,7 @@ function Get-InventoryInfo {
                     catch {
                         $MachineInfo.HostName = $Computer
                     }
-                    
+
                 }
                 $InventoryTotal += $MachineInfo
                 $MachineInfo
@@ -1013,7 +1013,7 @@ function Get-InventoryInfo {
             $MachineInfo.RAM = [Math]::Round(
                 (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).TotalPhysicalMemory / 1GB
             )
-            
+
             # Serial nunber
             $MachineInfo.SerialNumber = (Get-CimInstance -ClassName Win32_BIOS -CimSession $CimSession).SerialNumber
 
@@ -1035,7 +1035,7 @@ function Get-InventoryInfo {
             $MachineInfo.Disks = $Disks
 
 
-            # Trying to get current user and searching in AD  
+            # Trying to get current user and searching in AD
             $LastUserSid = (
                     Get-CimInstance Win32_UserProfile -CimSession $CimSession | `
                         Where-Object {!$PSItem.Special} | `
@@ -1055,7 +1055,7 @@ function Get-InventoryInfo {
                 $MachineInfo.LastUser = 'NoData'
             }
 
-            
+
             # Searching connected monitors
             $Monitors = @()
             $MonitorsFromWmi = @()
@@ -1069,18 +1069,18 @@ function Get-InventoryInfo {
                 $MachineInfo.Monitors = $Monitors
             }
             foreach ($WmiMonitor in $MonitorsFromWmi) {
-                $Monitors += [MonitorInfo]::new( 
+                $Monitors += [MonitorInfo]::new(
                     $WmiMonitor.Active,
                     [string]::Join('',($WmiMonitor.ManufacturerName | `
                             Where-Object {$PSItem -ne 0} | `
                             ForEach-Object {[char]$PSItem}
                         )
-                    ), 
+                    ),
                     [string]::Join('',($WmiMonitor.UserFriendlyName | `
                             Where-Object {$PSItem -ne 0} | `
                             ForEach-Object {[char]$PSItem}
                         )
-                    ), 
+                    ),
                     [string]::Join('',($WmiMonitor.SerialNumberID | `
                             Where-Object {$PSItem -ne 0} | `
                             ForEach-Object {[char]$PSItem}
@@ -1089,7 +1089,7 @@ function Get-InventoryInfo {
                 )
             }
             $MachineInfo.Monitors = $Monitors
-            
+
 
             # So UPS like monitors
             $UPSs = @()
@@ -1123,19 +1123,19 @@ function Get-InventoryInfo {
                     Where-Object {
                         $PSItem.DeviceID -and
                         $PSItem.NetEnabled -and
-                        $PSItem.PhysicalAdapter # -and 
+                        $PSItem.PhysicalAdapter # -and
                         # $PSItem.DeviceID -eq $DomainNicIndex
                     }
             ).MACAddress
 
-            $MachineInfo.HostName = (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).DNSHostName + 
+            $MachineInfo.HostName = (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).DNSHostName +
                 '.' +
                 (Get-CimInstance -ClassName Win32_ComputerSystem -CimSession $CimSession).Domain
-        
-            
+
+
             Remove-CimSession -CimSession $CimSession
             $InventoryTotal += $MachineInfo
-            $MachineInfo       
+            $MachineInfo
         }
     }
 
@@ -1153,8 +1153,8 @@ function Get-InventoryInfo {
             $Date = Get-Date -Format yyyy-MM-dd
             $FileName = "InventoryReport_$Date.Json"
             $JsonPath = Join-Path -Path $ExportPath -ChildPath $FileName
-            $InventoryTotal| ConvertTo-Json -Depth 5 | Out-File -FilePath $JsonPath -Encoding UTF8 
-            Write-Host "Json export done: $JsonPath" -ForegroundColor Green   
+            $InventoryTotal| ConvertTo-Json -Depth 5 | Out-File -FilePath $JsonPath -Encoding UTF8
+            Write-Host "Json export done: $JsonPath" -ForegroundColor Green
         }
 
         if ($Excel) {
@@ -1201,7 +1201,7 @@ function Restart-Server {
         [ValidatePattern("^(3[01]|[12][0-9]|0?[1-9])\.(1[012]|0?[1-9])\.((?:19|20)\d{2})$")]
         [string]$Date,
 
-        
+
         # Time of reboot
         [Parameter(
             Mandatory = $true,
@@ -1210,7 +1210,7 @@ function Restart-Server {
         [ValidatePattern("^([0-1][0-9]|[2][0-3]):([0-5][0-9])$")]
         [string]$Time
     )
-    
+
     begin {
         try {
             $RebootDateTime = [datetime]::ParseExact("$Date $Time", "dd.MM.yyyy HH:mm", $null)
@@ -1221,7 +1221,7 @@ function Restart-Server {
 
         $ServerCimSessions = @()
     }
-    
+
     process {
         foreach ($Server in $ComputerName) {
             try {
@@ -1235,9 +1235,9 @@ function Restart-Server {
             }
         }
     }
-    
+
     end {
-        $Trigger = New-ScheduledTaskTrigger -Once -At $RebootDateTime 
+        $Trigger = New-ScheduledTaskTrigger -Once -At $RebootDateTime
         $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c shutdown -r -t 0"
         $Principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
         Register-ScheduledTask -TaskName "Reboot" -Trigger $Trigger -Action $Action -Principal $Principal -Force -CimSession $ServerCimSessions
@@ -1265,7 +1265,7 @@ function Test-Port {
             Position = 1
         )]
         [int]$Port,
-        
+
         # Timeout (ms)
         [Parameter(
             Mandatory = $false
@@ -1281,7 +1281,7 @@ function Test-Port {
     $Connection = $TcpClient.BeginConnect($ComputerName,$Port,$null,$null)
 
     # Set the wait time
-    $Wait = $Connection.AsyncWaitHandle.WaitOne($Timeout,$false) 
+    $Wait = $Connection.AsyncWaitHandle.WaitOne($Timeout,$false)
 
     # Check to see if the connection is done
     if ($Wait) {
@@ -1292,7 +1292,7 @@ function Test-Port {
             $TcpClient.Close()
             return $false
         }
-        
+
         $TcpClient.Close()
         return $true
     }
@@ -1313,44 +1313,44 @@ function Test-Port {
 ##############################################################
 function Get-IPAddressCalculation {
     <#PSScriptInfo
- 
+
     .VERSION 1.0.3
-    
+
     .GUID cb059a0e-09b6-4756-8df4-28e997b9d97f
-    
+
     .AUTHOR saw-friendship@yandex.ru
-    
+
     .COMPANYNAME
-    
+
     .COPYRIGHT
-    
+
     .TAGS IP Subnet Calculator WildCard CIDR
-    
+
     .LICENSEURI
-    
+
     .PROJECTURI https://sawfriendship.wordpress.com/
-    
+
     .ICONURI
-    
+
     .EXTERNALMODULEDEPENDENCIES
-    
+
     .REQUIREDSCRIPTS
-    
+
     .EXTERNALSCRIPTDEPENDENCIES
-    
+
     .RELEASENOTES
-    
-    
+
+
     #>
 
     <#
-    
+
     .DESCRIPTION
     IP Calculator for calculation IP Subnet
-    
+
     .EXAMPLE
     IP-Calc -IPAddress 192.168.0.0 -Mask 255.255.255.0
-    
+
     IP : 192.168.0.0
     Mask : 255.255.255.0
     PrefixLength : 24
@@ -1364,11 +1364,11 @@ function Get-IPAddressCalculation {
     MaskBin : 11111111.11111111.11111111.00000000
     SubnetBin : 11000000.10101000.00000000.00000000
     BroadcastBin : 11000000.10101000.00000000.11111111
-    
-    
+
+
     .EXAMPLE
     IP-Calc -IPAddress 192.168.3.0 -PrefixLength 23
-    
+
     IP : 192.168.3.0
     Mask : 255.255.254.0
     PrefixLength : 23
@@ -1382,11 +1382,11 @@ function Get-IPAddressCalculation {
     MaskBin : 11111111.11111111.11111110.00000000
     SubnetBin : 11000000.10101000.00000010.00000000
     BroadcastBin : 11000000.10101000.00000011.11111111
-    
-    
+
+
     .EXAMPLE
     IP-Calc -IPAddress 192.168.0.0 -WildCard 0.0.3.0
-    
+
     IP : 192.168.0.0
     Mask : 255.255.252.255
     PrefixLength : 30
@@ -1400,10 +1400,10 @@ function Get-IPAddressCalculation {
     MaskBin : 11111111.11111111.11111100.11111111
     SubnetBin : 11000000.10101000.00000000.00000000
     BroadcastBin : 11000000.10101000.00000011.00000000
-    
+
     .EXAMPLE
     IP-Calc -IPAddress 172.16.0.0 -PrefixLength 12
-    
+
     IP : 172.16.0.0
     Mask : 255.240.0.0
     PrefixLength : 12
@@ -1417,17 +1417,17 @@ function Get-IPAddressCalculation {
     MaskBin : 11111111.11110000.00000000.00000000
     SubnetBin : 10101100.00010000.00000000.00000000
     BroadcastBin : 10101100.00011111.11111111.11111111
-    
-    
+
+
     .EXAMPLE
     IP-Calc -IPAddress 192.0.2.48 -PrefixLength 30 -CreateIParrayPassThru
-    
+
     192.0.2.48
     192.0.2.49
     192.0.2.50
     192.0.2.51
-    
-    #> 
+
+    #>
 
 
     [CmdletBinding(DefaultParameterSetName="ParameterSet1")]
@@ -1517,7 +1517,7 @@ function Get-NetUserDomain {
             ValueFromPipelineByPropertyName = $true
         )]
         [string[]]$SamAccountName = $env:USERNAME
-        
+
     )
     begin {
         $AllResult = @()
@@ -1525,7 +1525,7 @@ function Get-NetUserDomain {
     process {
         foreach ($UserName in $SamAccountName) {
             $NetUserDomainStrings = (net user $UserName /DOMAIN | Where-Object {$PSItem -match "\s{4}"}) -replace "\s{4,}",";"
-            $Result = New-Object -TypeName psobject                
+            $Result = New-Object -TypeName psobject
 
             foreach ($String in $NetUserDomainStrings) {
                 [bool]$PrevProperty = $false
@@ -1542,7 +1542,7 @@ function Get-NetUserDomain {
                 else {
                     $PrevProperty = $true
                 }
-                
+
                 # Define value type
                 switch -regex ($ParsedString[1]) {
                     ("^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$") {
@@ -1580,7 +1580,7 @@ function Get-NetUserDomain {
                     $Result.$PropertyName = $Result.$PropertyName | Where-Object {$PSItem}
                 }
             }
-           $AllResult += $Result              
+           $AllResult += $Result
         }
     }
     end {
@@ -1628,7 +1628,7 @@ function Import-Excel {
                     -RecommendedAction "Check file extension." `
                     -Category InvalidArgument `
                     -TargetObject $File `
-                
+
             }
 
             $FileItem = Get-Item $File
@@ -1666,7 +1666,7 @@ function Update-ScriptVersion {
 
         [Parameter()]
         [switch]$Major,
-        
+
         [Parameter()]
         [switch]$Minor,
 
@@ -1731,7 +1731,7 @@ function Update-ScriptVersion {
                 $CurrentReleaseNotes = $Matches[0]
 
                 if ($ReleaseNotes) {
-                    $UpdatedReleaseNotes = $CurrentReleaseNotes -replace "\.RELEASENOTES",".RELEASENOTES`n$((Get-Date).ToString('dd.MM.yyyy HH:mm')) : $ReleaseNotes"    
+                    $UpdatedReleaseNotes = $CurrentReleaseNotes -replace "\.RELEASENOTES",".RELEASENOTES`n$((Get-Date).ToString('dd.MM.yyyy HH:mm')) : $ReleaseNotes"
                 }
                 else {
                     $UpdatedReleaseNotes = $CurrentReleaseNotes
@@ -1739,15 +1739,15 @@ function Update-ScriptVersion {
 
                 $UpdatedInfoBlock = $InfoBlock -replace "\.VERSION\s(\d+\.){3}(\d+)",".VERSION $($NewVersion.ToString())" `
                     -replace "\.RELEASENOTES(.|\n|\r)*#>",$UpdatedReleaseNotes
-                
-                
+
+
                 Write-Verbose $UpdatedInfoBlock
 
-                ($ScriptContent -replace "\s*<#PSScriptInfo(.|\n|\r)[^<]+#>",$UpdatedInfoBlock).Trim() | 
+                ($ScriptContent -replace "\s*<#PSScriptInfo(.|\n|\r)[^<]+#>",$UpdatedInfoBlock).Trim() |
                         Out-File $FileItem.FullName -Encoding utf8 -Force
-                
+
             }
-      
+
         }
     }
     end {}
@@ -1771,7 +1771,7 @@ function Update-ModuleVersion {
 
         [Parameter()]
         [switch]$Major,
-        
+
         [Parameter()]
         [switch]$Minor,
 
@@ -1796,9 +1796,9 @@ function Update-ModuleVersion {
             catch {
                 $ManifestPath = [System.IO.Path]::ChangeExtension($File,'psd1')
             }
-            
+
             Write-Verbose $ManifestPath
-            
+
             $CurrentVersion = $null
             try {
                 $CurrentVersion = (Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop).Version
@@ -1815,7 +1815,7 @@ function Update-ModuleVersion {
             catch {
                 Write-Verbose "$FileItem has no nested modules"
             }
-            
+
 
             Write-Debug "Variables defined"
             if ($CurrentVersion) {
@@ -1842,7 +1842,7 @@ function Update-ModuleVersion {
                     $PatchVer,
                     $RevisionVer
                 )
-                Write-Verbose $NewVersion 
+                Write-Verbose $NewVersion
 
                 $ModuleInfo = @{
                     Path = $ManifestPath
@@ -1852,7 +1852,7 @@ function Update-ModuleVersion {
 
                 if ($ReleaseNotes) {
                     $ReleaseNotesString = (
-                        $NewVersion.ToString() + 
+                        $NewVersion.ToString() +
                         (Get-Date -Format ' (dd.MM.yyyy): ') +
                         "$ReleaseNotes`n" +
                         (Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop).ReleaseNotes
@@ -1863,8 +1863,8 @@ function Update-ModuleVersion {
                     $ModuleInfo.Add('NestedModules',$NestedModules)
                 }
                 Update-ModuleManifest @ModuleInfo
-               
-            }            
+
+            }
         }
     }
     end {}
@@ -1882,19 +1882,34 @@ function New-ExchangeSession {
             Mandatory = $false,
             Position = 0
         )]
-        [string]
-        $ExchangeServer
+        [string]$Domain = $env:USERDNSDOMAIN,
+
+        # Exchange server FQDN.
+        [Parameter(
+            Mandatory = $false,
+            Position = 0
+        )]
+        [string]$ExchangeServer
     )
 
     if (!$ExchangeServer) {
         $ExchangeServers = @()
         try {
-            $ExchangeServersGroup = ([adsisearcher]"(&(objectClass=group)(cn=Exchange servers))").FindOne().GetDirectoryEntry().member
+            $Root = [adsi]"LDAP://$(($Domain.ToLower().Split('.') | ForEach-Object {"DC=$PSItem"}) -join ',')"
+            $Searcher = [adsisearcher]::new($Root)
         }
         catch {
-            throw "Cannot find Exchange server $($ExchangeServer) in this forest."
+            throw "Cannot contact domain $($Domain) via LDAP. $($Error[0].Exception.Message)"
         }
-        
+
+        try {
+            $Searcher.Filter = "(&(objectClass=group)(cn=Exchange servers))"
+            $ExchangeServersGroup = $Searcher.FindOne().GetDirectoryEntry().member
+        }
+        catch {
+            throw "Cannot find Exchange server $($ExchangeServer) in forest $Domain. $($Error[0].Exception.Message)"
+        }
+
         foreach ($Member in $ExchangeServersGroup) {
             $ExchSearcher = [adsisearcher]"(&(objectClass=computer)(distinguishedName=$Member))"
             [void]($ExchSearcher.PropertiesToLoad.Add('dNSHostName'))
@@ -1917,7 +1932,7 @@ function New-ExchangeSession {
     $OpenedExSess = Get-PSSession | Where-Object {($PSItem.ComputerName -eq $ExchangeServer) -and ($PSItem.State -eq "Opened")}
     if (!$OpenedExSess) {
         try {
-            $global:Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos                
+            $global:Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos
         }
         catch {
             throw $Error[0].Exception.Message
@@ -1951,7 +1966,7 @@ function Invoke-Process {
         )]
         [string[]]$ArgumentList
     )
-    
+
     $ProcessInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $ProcessInfo.FileName = $Command
     $ProcessInfo.RedirectStandardError = $true
@@ -1965,5 +1980,5 @@ function Invoke-Process {
     $Process.WaitForExit()
 
     return [ProcessInvocationResult]::new($Process)
-    
+
 }
