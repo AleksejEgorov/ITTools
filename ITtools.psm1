@@ -938,13 +938,13 @@ function Get-InventoryInfo {
     [CmdletBinding()]
     Param (
         [Parameter(
-            Mandatory = $true,
+            Mandatory = $false,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0
         )]
         [Alias('Name','HostName')]
-        [string[]]$Computername,
+        [string[]]$Computername = @($Env:COMPUTERNAME),
 
         [Parameter(Mandatory=$false)]
         [string]$ExportPath = "$HOME\Documents",
