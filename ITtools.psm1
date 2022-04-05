@@ -1430,15 +1430,41 @@ function Get-IPAddressCalculation {
     #>
 
 
-    [CmdletBinding(DefaultParameterSetName="ParameterSet1")]
+    [CmdletBinding(DefaultParameterSetName="CIDR")]
     param(
-        [parameter(ParameterSetName="ParameterSet1",Position=0)][Alias("IP")][IPAddress]$IPAddress,
-        [parameter(ParameterSetName="ParameterSet1",Position=1)][IPAddress]$Mask,
-        [parameter(ParameterSetName="ParameterSet1",Position=1)][ValidateRange(0,32)][int]$PrefixLength,
-        [parameter(ParameterSetName="ParameterSet1",Position=1)][Alias("Joker")][IPAddress]$WildCard,
-        [Parameter(ParameterSetName="ParameterSet2",Position=2,ValueFromPipeline = $true)][string]$CIDR,
-        [Parameter(Position=3)][switch]$CreateIParray,
-        [Parameter(Position=4)][switch]$CreateIParrayPassThru
+        [Parameter(
+            ParameterSetName="CIDR",
+            Position = 0,
+            ValueFromPipeline = $true
+        )]
+        [string]$CIDR,
+
+        [parameter(
+            ParameterSetName="Params"
+        )]
+        [Alias("IP")]
+        [IPAddress]$IPAddress,
+
+        [parameter(
+            ParameterSetName="Params"
+        )]
+        [IPAddress]$Mask,
+
+        [parameter(
+            ParameterSetName="Params"
+        )]
+        [ValidateRange(0,32)]
+        [int]$PrefixLength,
+
+        [parameter(
+            ParameterSetName="Params"
+        )]
+        [Alias("Joker")]
+        [IPAddress]$WildCard,
+
+
+        [switch]$CreateIParray,
+        [switch]$CreateIParrayPassThru
     )
 
     if($CIDR){
