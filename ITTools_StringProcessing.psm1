@@ -63,13 +63,13 @@ function Limit-String {
         )]
         [string]$String
     )
-    
+
     if ($String.Length -gt $Limit) {
         return [string]::Join('',$String[($String.Length - $Limit)..($String.Length - 1)])
     }
     else {
         return [string]$String
-    }   
+    }
 }
 
 
@@ -126,7 +126,7 @@ function ConvertTo-Encoding {
             Position = 0
         )]
         [string]$From,
-        
+
         [Parameter(
             Mandatory = $true,
             Position = 1
@@ -171,15 +171,15 @@ function New-Password {
         [ValidateRange(0,4)]
         [int]$Conditions = 4
     )
-        
+
     $CharacterList = @()
     $Symbols = '!@#$%^&*()-_=+<>'.ToCharArray()
-    
+
     $CharacterList += 65..90 | ForEach-Object {[char]$_}
     $CharacterList += 97..122 | ForEach-Object {[char]$_}
     $CharacterList += 0..9
     $CharacterList += $Symbols
-    
+
     do {
         $Passwd = ""
         # for ($i = 0; $i -lt $Length; $i++) {
@@ -187,7 +187,7 @@ function New-Password {
         #     $Passwd += $CharacterList[$RandomIndex]
         # }
         0..$Length | ForEach-Object {
-            $Passwd += $CharacterList | Get-Random 
+            $Passwd += $CharacterList | Get-Random
         }
 
         [int]$hasLowerChar = $Passwd -cmatch '[a-z]'
@@ -211,10 +211,9 @@ function Get-Translit {
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true
-            
         )]
         [AllowEmptyString()]
-        [string]$String
+        [string[]]$InputString
     )
 
     begin {
@@ -255,122 +254,123 @@ function Get-Translit {
     }
 
     process {
-        if (!$String) {
-            return $null
-        }
-
-        Write-Verbose '===================================================='
-        Write-Verbose "PROCESSING WORD : $String"
-        Write-Verbose '----------------------------------------------------'
-        $TransString = ''
-
-        for ($i = 0; $i -lt $String.Length; $i++) {
-            $VerboseString = ("SYMBOL $i").PadRight(12,' ') + " : $($String[$i]) :    "
-
-            if ($TransDict.Keys -notcontains $String[$i]) {
-                $TransString += $String[$i]
-                Write-Verbose ($VerboseString + "Not modified. Transsymbol : $($String[$i])")
-                continue
+        foreach ($String in $InputString) {
+            if (!$String) {
+                return $null
             }
 
-            switch ($String[$i]) {
-               'е' {
-                    if (
-                        ($i -ne 0) -and 
-                        ($String[$i - 1] -match "[ъь]")
-                    ) {
-                        $TransSymbol = 'ye'
-                    }
+            Write-Verbose '===================================================='
+            Write-Verbose "PROCESSING WORD : $String"
+            Write-Verbose '----------------------------------------------------'
+            $TransString = ''
+
+            for ($i = 0; $i -lt $String.Length; $i++) {
+                $VerboseString = ("SYMBOL $i").PadRight(12,' ') + " : $($String[$i]) :    "
+
+                if ($TransDict.Keys -notcontains $String[$i]) {
+                    $TransString += $String[$i]
+                    Write-Verbose ($VerboseString + "Not modified. Transsymbol : $($String[$i])")
+                    continue
                 }
 
-               'ё' {
-                    if (
-                        ($i -ne 0) -and 
-                        ($String[$i - 1] -match "[жчшщ]")
-                    ) {
-                        $TransSymbol = 'o'
-                    }
-                }
-
-                'и' {
-                    if (
-                        ($i -ne 0) -and 
-                        ($String[$i - 1] -match "[ъь]")
-                    ) {
-                        $TransSymbol = 'yi'
-                    }
-                    elseif (
-                        ($String[$i + 1] -match "й") -and 
-                        # https://www.regular-expressions.info/unicode.html
-                        (
-                            ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
-                            ($i + 2 -eq $String.Length)
-                        )
-                    ) {
-                        $TransSymbol = ''
-                    }
-                }
-                
-                'х' {
-                    if (
-                        ($i -eq 0) -or 
-                        ($String[$i - 1] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]")
-                    ) {
-                        $TransSymbol = 'kh'
+                switch ($String[$i]) {
+                'е' {
+                        if (
+                            ($i -ne 0) -and
+                            ($String[$i - 1] -match "[ъь]")
+                        ) {
+                            $TransSymbol = 'ye'
+                        }
                     }
 
-                }
-                
-                'ы' {
-                    if (
-                        ($String[$i + 1] -match "й") -and 
-                        (
+                'ё' {
+                        if (
+                            ($i -ne 0) -and
+                            ($String[$i - 1] -match "[жчшщ]")
+                        ) {
+                            $TransSymbol = 'o'
+                        }
+                    }
+
+                    'и' {
+                        if (
+                            ($i -ne 0) -and
+                            ($String[$i - 1] -match "[ъь]")
+                        ) {
+                            $TransSymbol = 'yi'
+                        }
+                        elseif (
+                            ($String[$i + 1] -match "й") -and
                             # https://www.regular-expressions.info/unicode.html
-                            ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
-                            ($i + 2 -eq $String.Length)
-                        )
-                    ) {
-                        $TransSymbol = ''
+                            (
+                                ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
+                                ($i + 2 -eq $String.Length)
+                            )
+                        ) {
+                            $TransSymbol = ''
+                        }
                     }
+
+                    'х' {
+                        if (
+                            ($i -eq 0) -or
+                            ($String[$i - 1] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]")
+                        ) {
+                            $TransSymbol = 'kh'
+                        }
+
+                    }
+
+                    'ы' {
+                        if (
+                            ($String[$i + 1] -match "й") -and
+                            (
+                                # https://www.regular-expressions.info/unicode.html
+                                ($String[$i + 2] -match "[\p{S}\p{P}\p{Z}\p{Nd}\p{C}]") -or
+                                ($i + 2 -eq $String.Length)
+                            )
+                        ) {
+                            $TransSymbol = ''
+                        }
+                    }
+
+                    Default {}
                 }
 
-                Default {}
-            }
-
-            try {
-                [void](Get-Variable -Name 'TransSymbol' -ErrorAction Stop)
-                $VerboseString += 'Special case. '
-            } 
-            catch {
-                $TransSymbol = $TransDict[([string]$String[$i]).ToLower()]
-                $VerboseString += 'Regular case. '
-            }
+                try {
+                    [void](Get-Variable -Name 'TransSymbol' -ErrorAction Stop)
+                    $VerboseString += 'Special case. '
+                }
+                catch {
+                    $TransSymbol = $TransDict[([string]$String[$i]).ToLower()]
+                    $VerboseString += 'Regular case. '
+                }
 
 
-            # For uppercase
-            if ($String[$i] -cmatch ([string]$String[$i]).ToUpper()) {
+                # For uppercase
+                if ($String[$i] -cmatch ([string]$String[$i]).ToUpper()) {
 
-                for ($j = 0; $j -lt $TransSymbol.Length; $j++) {
-                    if ($j -eq 0) {
-                        $TransString += ([string]$TransSymbol[$j]).ToUpper()
-                    }
-                    else {
-                        $TransString += $TransSymbol[$j]
+                    for ($j = 0; $j -lt $TransSymbol.Length; $j++) {
+                        if ($j -eq 0) {
+                            $TransString += ([string]$TransSymbol[$j]).ToUpper()
+                        }
+                        else {
+                            $TransString += $TransSymbol[$j]
+                        }
                     }
                 }
+                else {
+                    $TransString += $TransSymbol
+                }
+                $VerboseString += "Transsymbol : $TransSymbol"
+                Write-Verbose $VerboseString
+                Remove-Variable -Name 'TransSymbol'
             }
-            else {
-                $TransString += $TransSymbol
-            }
-            $VerboseString += "Transsymbol : $TransSymbol"
-            Write-Verbose $VerboseString
-            Remove-Variable -Name 'TransSymbol'
+            Write-Verbose '===================================================='
+            return $TransString
         }
-        Write-Verbose '===================================================='
     }
-    end {
-        return $TransString
-    }
+    end {}
 }
 
 
