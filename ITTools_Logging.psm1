@@ -19,11 +19,11 @@ function Write-CMLog {
         None. Write-CMLog don't return anything.
     .EXAMPLE
         PS> Write-CMLog -LogFilePath C:\Application\some.log -Level Info -Message "File created"
-        
+
         Write info message "File created" to log file C:\Application\some.log
     .EXAMPLE
         PS>$Error[0].Exception | Write-CMLog -LogFilePath C:\Application\some.log -Level Error
-        
+
         Write last error message to log file C:\Application\some.log as error record.
     .LINK
         https://docs.microsoft.com/en-us/mem/configmgr/core/support/tools
@@ -38,7 +38,7 @@ function Write-CMLog {
             ValueFromPipelineByPropertyName = $true
         )]
         [string]$Message,
-        
+
         # Log file
         [Parameter(
             Mandatory = $true,
@@ -63,7 +63,7 @@ function Write-CMLog {
             Mandatory = $false,
             Position = 3
         )]
-        [String]$Component 
+        [String]$Component
     )
 
     # Define record type
@@ -77,7 +77,7 @@ function Write-CMLog {
         $Component = [System.IO.Path]::GetFileName($($MyInvocation.ScriptName))
         if (!$Component) {
             $Component = "PSConsole"
-        }    
+        }
     }
 
 
@@ -100,7 +100,7 @@ function Write-CMLog {
     else {
         $Encoding = 'utf8'
     }
-    
+
     while (!($LogSuccess -or $AttemptsLeft -eq 0)) {
         try {
             Add-Content -Path $LogFilePath -Value $Content -Encoding $Encoding -ErrorAction Stop
@@ -166,7 +166,7 @@ function Write-Log {
             ValueFromPipelineByPropertyName = $true
         )]
         [string]$Message,
-        
+
         # Log file
         [Parameter(
             Mandatory = $true,
@@ -192,12 +192,12 @@ function Write-Log {
         if (!$ScriptPath) {
             $ScriptPath = "PowerShell CLI"
         }
-        "#  This is $([System.IO.Path]::GetFileNameWithoutExtension($LogFilePath)) log from $ScriptPath" | Out-File $LogFilePath -Encoding utf8 
+        "#  This is $([System.IO.Path]::GetFileNameWithoutExtension($LogFilePath)) log from $ScriptPath" | Out-File $LogFilePath -Encoding utf8
         "# " | Out-File $LogFilePath -Encoding utf8 -Append #-NoNewline
         # [string]::Join('',(1..80 | ForEach-Object {'='})) | Out-File $LogFilePath -Encoding utf8 -Append
     }
 
-    $LogString = "$(Get-Date -Format "dd.MM.yyyy HH:mm:ss") : $Level : $Message" 
+    $LogString = "$(Get-Date -Format "dd.MM.yyyy HH:mm:ss") : $Level : $Message"
     Write-Verbose $LogString
     $LogString | Out-File $LogFilePath -Encoding utf8 -Append
 }
@@ -205,44 +205,44 @@ function Write-Log {
 
 # Not mine function, but may the force be with the author.
 function Get-IASLog {
-    <# 
-        .SYNOPSIS 
-            Log parser/interpreter for MS NPS RADIUS Logs 
-        .DESCRIPTION 
-            Easy parse and interpret Data from MS NPS RADIUS log file. 
+    <#
+        .SYNOPSIS
+            Log parser/interpreter for MS NPS RADIUS Logs
+        .DESCRIPTION
+            Easy parse and interpret Data from MS NPS RADIUS log file.
             !!! You must Have MS NPS/RADIUS Logs in "IAS (Legacy)" Format Created Daily !!! LogNames in format:
             "IN" + Last two numbers of current year + number of current month + number of current day + .log
             For Example: At 2015-10-23 You have: IN151023.log
-            
+
             At this script in "Variables" section I Hard-Coded names of NPS/RADIUS Servers (RADIUS1 and RADIUS2) and Path to shared logs (Logs)
             You must change that variables corresponding to Your Enivornment
 
-        .NOTES 
-            Author         : Marcin Krzanowicz - mkrzanowicz@gmail.com 
-            Author Website : http://mkrzanowicz.pl 
-        .LINK 
+        .NOTES
+            Author         : Marcin Krzanowicz - mkrzanowicz@gmail.com
+            Author Website : http://mkrzanowicz.pl
+        .LINK
             https://technet.microsoft.com/en-us/library/cc785145(v=ws.10).aspx
             https://technet.microsoft.com/en-us/library/cc771748%28v=ws.10%29.aspx
             http://www.iana.org/assignments/radius-types/radius-types.xhtml
-        .EXAMPLE 
+        .EXAMPLE
             NAP_Parser.ps1 -SearchData id12345
             Get RADIUS Events with 'id12345' Data in Log file (Last 2 days in Logs [Default] searched + Full Info about Events)
-        .EXAMPLE 
+        .EXAMPLE
             NAP_Parser.ps1 -SearchData id12345 -SearchDays 5
             Get RADIUS Events with 'id12345' Data in Log file (Last 5 days in Logs searched + Full Info about Events)
-        .EXAMPLE 
+        .EXAMPLE
             NAP_Parser.ps1 -SearchData id12345 -BaseInfo
             Get Base (only necessary info) RADIUS Events with 'id12345' Data in Log file (Last 2 days in Logs [Default] searched)
-        .EXAMPLE 
+        .EXAMPLE
             NAP_Parser.ps1 -SearchData id12345 -NotStreaming
             Get Base (only necessary info) RADIUS Events with 'id12345' Data in Log file in Formatted Table (Not streaming data on display)
-        .EXAMPLE 
+        .EXAMPLE
             NAP_Parser.ps1 -SearchData
             Get Full Info about All RADIUS Events (Default Last 2 days)
-        .EXAMPLE 
+        .EXAMPLE
             NAP_Parser.ps1 -filename D:\NAP\iaslog7.log -BaseInfo
             Interpret Logs from specified File Logs
-    #>  
+    #>
 
 
     param (
@@ -250,16 +250,16 @@ function Get-IASLog {
         [int]$SearchDays = 2,					#Days to search Logs; Default = 2
         [string]$SearchData = $null,			#Search LogFile for specified data
         [switch]$BaseInfo,						#Display only base info about Events
-        [switch]$NotStreaming					#Format All Data into Table (not Live Dispaly like default $BaseInfo). 
-    ) 
+        [switch]$NotStreaming					#Format All Data into Table (not Live Dispaly like default $BaseInfo).
+    )
 
     ##############################################
     # RADIUS/NPS Documented Parameters and meanings
 
-    $PACKET_TYPES = @{ 
-        1 = "Access-Request"; 
-        2 = "Access-Accept"; 
-        3 = "Access-Reject"; 
+    $PACKET_TYPES = @{
+        1 = "Access-Request";
+        2 = "Access-Accept";
+        3 = "Access-Reject";
         4 = "Accounting-Request";
         5 = "Accounting-Response";
         6 = "Accounting-Status";
@@ -274,13 +274,13 @@ function Get-IASLog {
         24 = "Resource-Query-Response";
         25 = "Alternate-Resource-Reclaim-Request";
         26 = "NAS-Reboot-Request";
-        27 = "NAS-Reboot-Response";	
+        27 = "NAS-Reboot-Response";
         29 = "Next-Passcode";
         30 = "New-Pin";
         31 = "Terminate-Session";
         32 = "Password-Expired";
         33 = "Event-Request";
-        34 = "Event-Response"; 	
+        34 = "Event-Response";
         40 = "Disconnect-Request";
         41 = "Disconnect-ACK";
         42 = "Disconnect-NAK";
@@ -289,7 +289,7 @@ function Get-IASLog {
         45 = "CoA-NAK";
         50 = "IP-Address-Allocate";
         51 = "IP-Address-Release";
-    } 
+    }
 
     $LOGIN_SERVICES =@{
         0  = "Telnet";
@@ -324,7 +324,7 @@ function Get-IASLog {
         19 = "Additional-Authorization"
     }
 
-    $AUTHENTICATION_TYPES = @{ 
+    $AUTHENTICATION_TYPES = @{
         1 = "PAP";
         2 = "CHAP";
         3 = "MS-CHAP";
@@ -333,41 +333,41 @@ function Get-IASLog {
         7 = "None";
         8 = "Custom";
         11 = "PEAP"
-    }  
+    }
 
-    $REASON_CODES = @{ 
-        0 = "IAS_SUCCESS"; 
-        1 = "IAS_INTERNAL_ERROR"; 
-        2 = "IAS_ACCESS_DENIED"; 
-        3 = "IAS_MALFORMED_REQUEST"; 
-        4 = "IAS_GLOBAL_CATALOG_UNAVAILABLE"; 
-        5 = "IAS_DOMAIN_UNAVAILABLE"; 
-        6 = "IAS_SERVER_UNAVAILABLE"; 
-        7 = "IAS_NO_SUCH_DOMAIN"; 
-        8 = "IAS_NO_SUCH_USER"; 
-        16 = "IAS_AUTH_FAILURE"; 
-        17 = "IAS_CHANGE_PASSWORD_FAILURE"; 
-        18 = "IAS_UNSUPPORTED_AUTH_TYPE"; 
-        32 = "IAS_LOCAL_USERS_ONLY"; 
-        33 = "IAS_PASSWORD_MUST_CHANGE"; 
-        34 = "IAS_ACCOUNT_DISABLED"; 
-        35 = "IAS_ACCOUNT_EXPIRED"; 
-        36 = "IAS_ACCOUNT_LOCKED_OUT"; 
-        37 = "IAS_INVALID_LOGON_HOURS"; 
-        38 = "IAS_ACCOUNT_RESTRICTION"; 
-        48 = "IAS_NO_POLICY_MATCH"; 
-        64 = "IAS_DIALIN_LOCKED_OUT"; 
-        65 = "IAS_DIALIN_DISABLED"; 
-        66 = "IAS_INVALID_AUTH_TYPE"; 
-        67 = "IAS_INVALID_CALLING_STATION"; 
-        68 = "IAS_INVALID_DIALIN_HOURS"; 
-        69 = "IAS_INVALID_CALLED_STATION"; 
-        70 = "IAS_INVALID_PORT_TYPE"; 
-        71 = "IAS_INVALID_RESTRICTION"; 
-        80 = "IAS_NO_RECORD"; 
-        96 = "IAS_SESSION_TIMEOUT"; 
-        97 = "IAS_UNEXPECTED_REQUEST"; 
-    } 
+    $REASON_CODES = @{
+        0 = "IAS_SUCCESS";
+        1 = "IAS_INTERNAL_ERROR";
+        2 = "IAS_ACCESS_DENIED";
+        3 = "IAS_MALFORMED_REQUEST";
+        4 = "IAS_GLOBAL_CATALOG_UNAVAILABLE";
+        5 = "IAS_DOMAIN_UNAVAILABLE";
+        6 = "IAS_SERVER_UNAVAILABLE";
+        7 = "IAS_NO_SUCH_DOMAIN";
+        8 = "IAS_NO_SUCH_USER";
+        16 = "IAS_AUTH_FAILURE";
+        17 = "IAS_CHANGE_PASSWORD_FAILURE";
+        18 = "IAS_UNSUPPORTED_AUTH_TYPE";
+        32 = "IAS_LOCAL_USERS_ONLY";
+        33 = "IAS_PASSWORD_MUST_CHANGE";
+        34 = "IAS_ACCOUNT_DISABLED";
+        35 = "IAS_ACCOUNT_EXPIRED";
+        36 = "IAS_ACCOUNT_LOCKED_OUT";
+        37 = "IAS_INVALID_LOGON_HOURS";
+        38 = "IAS_ACCOUNT_RESTRICTION";
+        48 = "IAS_NO_POLICY_MATCH";
+        64 = "IAS_DIALIN_LOCKED_OUT";
+        65 = "IAS_DIALIN_DISABLED";
+        66 = "IAS_INVALID_AUTH_TYPE";
+        67 = "IAS_INVALID_CALLING_STATION";
+        68 = "IAS_INVALID_DIALIN_HOURS";
+        69 = "IAS_INVALID_CALLED_STATION";
+        70 = "IAS_INVALID_PORT_TYPE";
+        71 = "IAS_INVALID_RESTRICTION";
+        80 = "IAS_NO_RECORD";
+        96 = "IAS_SESSION_TIMEOUT";
+        97 = "IAS_UNEXPECTED_REQUEST";
+    }
 
     $ACCT_TERMINATE_CAUSES = @{
         1 =	"User Request";
@@ -398,7 +398,7 @@ function Get-IASLog {
     $ACCT_STATUS_TYPES = @{
         1 =	"Start";
         2 =	"Stop";
-        3 =	"Interim-Update";	
+        3 =	"Interim-Update";
         7 =	"Accounting-On";
         8 =	"Accounting-Off";
         9 =	"Tunnel-Start";
@@ -483,7 +483,7 @@ function Get-IASLog {
         4129 = "SAM-Account-Name";			#The user account name in the Security Accounts Manager (SAM) database.
         4130 = "Fully-Qualified-User-Name";	#The user name in canonical format.
         4132 = "EAP-Friendly-Name";			#The friendly name that is used with Extensible Authentication Protocol (EAP).
-        4136 = "Packet-Type";				#The type of packet		
+        4136 = "Packet-Type";				#The type of packet
         4142 = "Reason-Code";				#The Reason Code
         4149 = "NPS-Policy-Name";			#The friendly name of a remote access policy.
         4154 = "Connection-Request-Policy";
@@ -492,7 +492,7 @@ function Get-IASLog {
 
     ##############################################
 
-    # VARIABLES 
+    # VARIABLES
 
     $Servers = New-Object System.Collections.Arraylist
     $Logpaths = New-Object System.Collections.Arraylist
@@ -503,7 +503,7 @@ function Get-IASLog {
     ##############################################
 
     if ( [string]::IsNullOrEmpty($filename) )
-    { 	
+    {
         $DateAfter = (Get-Date).AddDays(-$SearchDays+1)
         $DateBefore = (Get-Date).AddDays(+1)
         $After = "IN" + (([string]($DateAfter.Year)).PadLeft(2,"0")).ToString().Substring(2) + ([string]($DateAfter.Month)).PadLeft(2,"0")+ ([string]($DateAfter.Day)).PadLeft(2,"0")
@@ -517,7 +517,7 @@ function Get-IASLog {
         }
         else
         {
-            $content = Get-Content (Get-Childitem $Logpaths -Include *.log | Where-Object{ ($PSItem.Name.Length -lt '13' -and  $PSItem.Name -ge $after -and  $PSItem.Name -le $before) } ) | Select-String -Pattern $SearchData 
+            $content = Get-Content (Get-Childitem $Logpaths -Include *.log | Where-Object{ ($PSItem.Name.Length -lt '13' -and  $PSItem.Name -ge $after -and  $PSItem.Name -le $before) } ) | Select-String -Pattern $SearchData
         }
     }
     else
@@ -525,8 +525,8 @@ function Get-IASLog {
         if ([string]::IsNullOrEmpty($SearchData) )
         {
             $content = Get-Content $filename
-        } 
-        else 
+        }
+        else
         {
             $content =  Get-Content $filename | Select-String -Pattern $SearchData
         }
@@ -534,14 +534,14 @@ function Get-IASLog {
 
     $FormattedBaseOutput = New-Object System.Collections.Arraylist
 
-    foreach ($line in $content) 
-    { 
+    foreach ($line in $content)
+    {
 
     $Tab = $line -split ','
     $i = 6                                #First 6 positions are Header
     $LogParameters = @{}
 
-    do 
+    do
     {
         if ( $tab[$i] -eq '4142')
         {
@@ -590,7 +590,7 @@ function Get-IASLog {
             {
                 $null
             }
-        } 
+        }
         elseif ( $tab[$i] -eq '15' )
         {
             $name = 'Login-Service'
@@ -690,7 +690,7 @@ function Get-IASLog {
     }
     while ($i -le $tab.count)
 
-    $logobj = New-Object PSObject 
+    $logobj = New-Object PSObject
     Add-Member -InputObject $logobj -MemberType NoteProperty -name "SwitchIP" -value $($tab[0])   # This is 802.1x Client IP, but in most common Case Clinet = 802.1x Switch
     Add-Member -InputObject $logobj -MemberType NoteProperty -name "Username" -value $($tab[1])
     Add-Member -InputObject $logobj -MemberType NoteProperty -name "Date-Time" -value $($($tab[3]) + " " + $($tab[2]) )
@@ -705,18 +705,18 @@ function Get-IASLog {
     }
     elseif ($BaseInfo)
     {
-        $logobj | Format-Table Date-Time, Username, Workstation-MAC, SwitchIP, SwitchInterface, NPS-Policy-Name, Packet-Type, Reason-Code -AutoSize 
+        $logobj | Format-Table Date-Time, Username, Workstation-MAC, SwitchIP, SwitchInterface, NPS-Policy-Name, Packet-Type, Reason-Code -AutoSize
     }
     else
     {
-        $logobj 
+        $logobj
     }
 
     }
     if ($NotStreaming)
     {
        $FormattedBaseOutput | Format-Table Date-Time, Username, Workstation-MAC, SwitchIP, NPS-Policy-Name, Packet-Type, Reason-Code -AutoSize
-    }   
+    }
 }
 
 function Get-NpsLog {
@@ -745,10 +745,10 @@ function Get-NpsLog {
         [switch]$Full
     )
 
-    $PacketTypes = @{ 
-        1 = "Access-Request"; 
-        2 = "Access-Accept"; 
-        3 = "Access-Reject"; 
+    $PacketTypes = @{
+        1 = "Access-Request";
+        2 = "Access-Accept";
+        3 = "Access-Reject";
         4 = "Accounting-Request";
         5 = "Accounting-Response";
         6 = "Accounting-Status";
@@ -763,13 +763,13 @@ function Get-NpsLog {
         24 = "Resource-Query-Response";
         25 = "Alternate-Resource-Reclaim-Request";
         26 = "NAS-Reboot-Request";
-        27 = "NAS-Reboot-Response";	
+        27 = "NAS-Reboot-Response";
         29 = "Next-Passcode";
         30 = "New-Pin";
         31 = "Terminate-Session";
         32 = "Password-Expired";
         33 = "Event-Request";
-        34 = "Event-Response"; 	
+        34 = "Event-Response";
         40 = "Disconnect-Request";
         41 = "Disconnect-ACK";
         42 = "Disconnect-NAK";
@@ -778,7 +778,7 @@ function Get-NpsLog {
         45 = "CoA-NAK";
         50 = "IP-Address-Allocate";
         51 = "IP-Address-Release";
-    } 
+    }
 
     $LoginServices =@{
         0  = "Telnet";
@@ -813,7 +813,7 @@ function Get-NpsLog {
         19 = "Additional-Authorization"
     }
 
-    $AuthenticationTypes = @{ 
+    $AuthenticationTypes = @{
         1 = "PAP";
         2 = "CHAP";
         3 = "MS-CHAP";
@@ -822,41 +822,41 @@ function Get-NpsLog {
         7 = "None";
         8 = "Custom";
         11 = "PEAP"
-    }  
+    }
 
-    $ReasonCodes = @{ 
-        0 = "IAS_SUCCESS"; 
-        1 = "IAS_INTERNAL_ERROR"; 
-        2 = "IAS_ACCESS_DENIED"; 
-        3 = "IAS_MALFORMED_REQUEST"; 
-        4 = "IAS_GLOBAL_CATALOG_UNAVAILABLE"; 
-        5 = "IAS_DOMAIN_UNAVAILABLE"; 
-        6 = "IAS_SERVER_UNAVAILABLE"; 
-        7 = "IAS_NO_SUCH_DOMAIN"; 
-        8 = "IAS_NO_SUCH_USER"; 
-        16 = "IAS_AUTH_FAILURE"; 
-        17 = "IAS_CHANGE_PASSWORD_FAILURE"; 
-        18 = "IAS_UNSUPPORTED_AUTH_TYPE"; 
-        32 = "IAS_LOCAL_USERS_ONLY"; 
-        33 = "IAS_PASSWORD_MUST_CHANGE"; 
-        34 = "IAS_ACCOUNT_DISABLED"; 
-        35 = "IAS_ACCOUNT_EXPIRED"; 
-        36 = "IAS_ACCOUNT_LOCKED_OUT"; 
-        37 = "IAS_INVALID_LOGON_HOURS"; 
-        38 = "IAS_ACCOUNT_RESTRICTION"; 
-        48 = "IAS_NO_POLICY_MATCH"; 
-        64 = "IAS_DIALIN_LOCKED_OUT"; 
-        65 = "IAS_DIALIN_DISABLED"; 
-        66 = "IAS_INVALID_AUTH_TYPE"; 
-        67 = "IAS_INVALID_CALLING_STATION"; 
-        68 = "IAS_INVALID_DIALIN_HOURS"; 
-        69 = "IAS_INVALID_CALLED_STATION"; 
-        70 = "IAS_INVALID_PORT_TYPE"; 
-        71 = "IAS_INVALID_RESTRICTION"; 
-        80 = "IAS_NO_RECORD"; 
-        96 = "IAS_SESSION_TIMEOUT"; 
-        97 = "IAS_UNEXPECTED_REQUEST"; 
-    } 
+    $ReasonCodes = @{
+        0 = "IAS_SUCCESS";
+        1 = "IAS_INTERNAL_ERROR";
+        2 = "IAS_ACCESS_DENIED";
+        3 = "IAS_MALFORMED_REQUEST";
+        4 = "IAS_GLOBAL_CATALOG_UNAVAILABLE";
+        5 = "IAS_DOMAIN_UNAVAILABLE";
+        6 = "IAS_SERVER_UNAVAILABLE";
+        7 = "IAS_NO_SUCH_DOMAIN";
+        8 = "IAS_NO_SUCH_USER";
+        16 = "IAS_AUTH_FAILURE";
+        17 = "IAS_CHANGE_PASSWORD_FAILURE";
+        18 = "IAS_UNSUPPORTED_AUTH_TYPE";
+        32 = "IAS_LOCAL_USERS_ONLY";
+        33 = "IAS_PASSWORD_MUST_CHANGE";
+        34 = "IAS_ACCOUNT_DISABLED";
+        35 = "IAS_ACCOUNT_EXPIRED";
+        36 = "IAS_ACCOUNT_LOCKED_OUT";
+        37 = "IAS_INVALID_LOGON_HOURS";
+        38 = "IAS_ACCOUNT_RESTRICTION";
+        48 = "IAS_NO_POLICY_MATCH";
+        64 = "IAS_DIALIN_LOCKED_OUT";
+        65 = "IAS_DIALIN_DISABLED";
+        66 = "IAS_INVALID_AUTH_TYPE";
+        67 = "IAS_INVALID_CALLING_STATION";
+        68 = "IAS_INVALID_DIALIN_HOURS";
+        69 = "IAS_INVALID_CALLED_STATION";
+        70 = "IAS_INVALID_PORT_TYPE";
+        71 = "IAS_INVALID_RESTRICTION";
+        80 = "IAS_NO_RECORD";
+        96 = "IAS_SESSION_TIMEOUT";
+        97 = "IAS_UNEXPECTED_REQUEST";
+    }
 
     $AcctTerminateCauses = @{
         1 =	"User Request";
@@ -887,7 +887,7 @@ function Get-NpsLog {
     $AcctStatusTypes = @{
         1 =	"Start";
         2 =	"Stop";
-        3 =	"Interim-Update";	
+        3 =	"Interim-Update";
         7 =	"Accounting-On";
         8 =	"Accounting-Off";
         9 =	"Tunnel-Start";
@@ -917,7 +917,7 @@ function Get-NpsLog {
         'Login-Service'
     )
 
-    
+
     $FirstProperties = @(
         # When
         'TimeStamp',
@@ -926,7 +926,7 @@ function Get-NpsLog {
         # Who?
         'SAMAccountName',
         'UserName',
-        # From? 
+        # From?
         'CallingStationId'
         'FramedIPAddress',
         # To?
@@ -947,11 +947,11 @@ function Get-NpsLog {
 
     [void]($PacketTypes,$LoginServices,$ServiceTypes,$AuthenticationTypes,$ReasonCodes,$AcctTerminateCauses,$AcctStatusTypes,$AcctAuthentics)
 
-    $LogContent = Get-Content $LogFile 
+    $LogContent = Get-Content $LogFile
     if ($Last) {
-        $LogContent = $LogContent[-1..-$Last]  
+        $LogContent = $LogContent[-1..-$Last]
     }
-    
+
     foreach ($XmlRow in $LogContent) {
         $EventObject = [pscustomobject]::new()
         $EventXml = ([xml]$XmlRow).Event
@@ -961,7 +961,7 @@ function Get-NpsLog {
         }
 
         foreach ($Property in ($EventXml | Get-Member -MemberType Properties).Name) {
-            
+
             if ($DiditProperties -contains $Property) {
                 $Value = (Get-Variable -Name "$($Property.Replace('-',''))s").Value[[int]$EventXml.$Property.'#text']
             }
@@ -979,16 +979,142 @@ function Get-NpsLog {
                 $AcceptedProperties += $Property
             }
         }
-        
+
         if ($Full) {
             foreach ($Property in $EventObject.psobject.Properties.Name) {
                 if ($AcceptedProperties -notcontains $Property) {
-                    $AcceptedProperties += $Property  
+                    $AcceptedProperties += $Property
                 }
             }
         }
-        
+
 
         $EventObject | Select-Object -Property $AcceptedProperties
+    }
+}
+
+function Get-SmtpLog {
+    [CmdletBinding()]
+    param(
+        # Please specify email address
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [string]$SmtpAddress,
+
+        # Please specify log file path, accepts wildcard
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [string]$LogFilePath
+    )
+
+    try {
+        [void](LogParser.exe)
+    }
+    catch {
+        Write-Error -Category NotInstalled `
+            -TargetObject 'LogParser.exe' `
+            -Message 'Seems like LogParser.exe is not installed or not in PATH'
+        return
+    }
+
+    #cls
+    $SearchString = "TO:<$($SmtpAddress.Replace('*','%'))>";
+    $SearchRegex = "TO:<$($SmtpAddress.Replace('*','[A-Za-z0-9_\.\-]*').Replace('.','\.').Replace('-','\-'))>";
+     # regex to match any of 421,450,451,452,500,501,
+    # 502,503,504,550,551,552,553,554 smtp error codes
+    $ErrorRegex =  "(-\s+)?(421|45[0-2]|5(0|5)[0-4])\+";
+    Write-Verbose "Search string is : $SearchString"
+    Write-Verbose "Search regexp is : $SearchRegex"
+
+
+    # generic code to colorize SMTP errors
+    function PaintRows {
+        [CmdletBinding()]
+        param (
+            [Parameter(
+                Mandatory = $true,
+                Position = 0,
+                ValueFromPipeline = $true
+            )]
+            [AllowEmptyCollection()]
+            [AllowNull()]
+            [string[]]$Array
+        )
+
+        begin {}
+
+        process {
+            foreach ($String in $Array) {
+                switch -Regex ($String) {
+                    $SearchRegex {$Color = 'Yellow'}
+                    $ErrorRegex {$Color = 'Red'}
+                    Default {$Color = 'Gray'}
+                }
+                Write-Host $String -ForegroundColor $Color
+            }
+        }
+
+        end {}
+    }
+
+
+    # the user may have more than one server associated, get list of all mail servers ips
+    $Query="SELECT DISTINCT c-ip FROM $LogFilePath WHERE cs-uri-query LIKE '%$SearchString%'";
+
+    $IPs = logparser -i:W3C -q:ON $Query;
+
+    if(!$IPs){
+        Write-Host "Address not found.`n" -b black -f red;
+        return;
+    }
+
+    # foreach ip returned emit the session
+
+    foreach ($IP in $IPs) {
+        Write-Verbose "Processing IP $IP."
+
+        $IpQuery = "SELECT date,time,c-ip,cs-method,cs-uri-query FROM $LogFilePath WHERE c-ip = '$IP'";
+        Write-Verbose "[QUERY] $IpQuery"
+
+        $ParseResult = LogParser.exe -i:W3C -q:ON $IpQuery;
+        Write-Verbose "$($ParseResult.Count) records found"
+
+        # set start anchors where line matches "220+" (session starts)
+        $SessionNumbers=@();
+
+        for($i = 0; $i -lt $ParseResult.Count; $i++) {
+            if ($ParseResult[$i] -match "-\s+220\+") {
+                $SessionNumbers += $i
+            }
+        }
+        $SessionNumbers += $ParseResult.Count;
+
+        if ($SessionNumbers.Count -eq 0){
+            write-host "`nNo sessions found for <$IP>`n" -ForegroundColor red;
+            return;
+        }
+
+        $Key = Read-Host "Found $($SessionNumbers.Count) sessions for <$IP>.`nDisplay [A]ll Sessions or [U]ser Sessions";
+
+        for ($i=0; $i -lt ($SessionNumbers.Count - 1); $i++) {
+            # slice array
+            $SessionStrings = $ParseResult[$SessionNumbers[$i]..$($SessionNumbers[$i+1]-1)];
+
+            switch ($Key) {
+                'A' {$DisplayStrings = $SessionStrings}
+                'U' {$DisplayStrings = $SessionStrings | Where-Object {$PSItem -Match $SearchRegex}}
+                default {}
+            }
+
+            if ($DisplayStrings -and ($i -lt $SessionNumbers.Count)) {
+                PaintRows $DisplayStrings
+                Write-Host '---- more ----'
+                [void]($Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'))
+            }
+        }
     }
 }
