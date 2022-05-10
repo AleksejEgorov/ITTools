@@ -213,6 +213,7 @@ function Get-Translit {
             ValueFromPipeline = $true
         )]
         [AllowEmptyString()]
+        [AllowNull()]
         [string[]]$InputString
     )
 
