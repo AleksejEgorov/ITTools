@@ -1006,9 +1006,20 @@ function Get-SmtpLog {
         # Please specify log file path, accepts wildcard
         [Parameter(
             Mandatory = $true,
-            Position = 0
+            Position = 1
         )]
-        [string]$LogFilePath
+        [string]$LogFilePath,
+
+        # Please specify log file path, accepts wildcard
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [ValidateSet(
+            'All',
+            'User'
+        )]
+        [string]$Display
     )
 
     try {
@@ -1075,6 +1086,7 @@ function Get-SmtpLog {
     # foreach ip returned emit the session
 
     foreach ($IP in $IPs) {
+        $Skip = $false
         Write-Verbose "Processing IP $IP."
 
         $IpQuery = "SELECT date,time,c-ip,cs-method,cs-uri-query FROM $LogFilePath WHERE c-ip = '$IP'";
@@ -1098,20 +1110,34 @@ function Get-SmtpLog {
             return;
         }
 
-        $Key = Read-Host "Found $($SessionNumbers.Count) sessions for <$IP>.`nDisplay [A]ll Sessions or [U]ser Sessions";
+        switch ($Display) {
+            'All' {$UserOnly = $false}
+            'User' {$UserOnly = $true}
+            default {
+                $Key = Read-Host "Found $($SessionNumbers.Count) sessions for <$IP>.`nDisplay User sessions, All sessions, or None [U/a/n]";
+                switch ($Key) {
+                    'A' {$UserOnly = $false}
+                    'U' {$UserOnly = $true}
+                    'N' {$Skip = $true}
+                    default {$UserOnly = $true}
+                }
+            }
+        }
+
+        if ($Skip) {
+            continue
+        }
 
         for ($i=0; $i -lt ($SessionNumbers.Count - 1); $i++) {
             # slice array
             $SessionStrings = $ParseResult[$SessionNumbers[$i]..$($SessionNumbers[$i+1]-1)];
 
-            switch ($Key) {
-                'A' {$DisplayStrings = $SessionStrings}
-                'U' {$DisplayStrings = $SessionStrings | Where-Object {$PSItem -Match $SearchRegex}}
-                default {}
-            }
 
-            if ($DisplayStrings -and ($i -lt $SessionNumbers.Count)) {
-                PaintRows $DisplayStrings
+            if ($SessionStrings -and ($i -lt $SessionNumbers.Count)) {
+                if ($UserOnly -and !($SessionStrings | Where-Object {$PSItem -Match $SearchRegex})) {
+                    continue
+                }
+                PaintRows $SessionStrings
                 Write-Host '---- more ----'
                 [void]($Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'))
             }
