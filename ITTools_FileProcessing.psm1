@@ -324,6 +324,13 @@ function Get-FolderSize {
 function Import-JsonSettings {
     [CmdletBinding()]
     param (
+        # Json config path
+        [Parameter(
+            Mandatory = $true,
+            Position = 2
+        )]
+        [string]$JsonPath,
+
         # Properties list
         [Parameter(
             Mandatory = $false,
@@ -337,34 +344,39 @@ function Import-JsonSettings {
             Mandatory = $false,
             Position = 2
         )]
-        [string]$JsonPath,
-
-        # Json config path
-        [Parameter(
-            Mandatory = $false,
-            Position = 2
-        )]
-        [string]$DefaultJsonPath = "$PSScriptRoot\Defaults.json"
+        [string]$DefaultJsonPath
     )
 
     begin {
-        try {
-            $global:DefaultSettings = Get-Content -Path $DefaultJsonPath -Raw | ConvertFrom-JSON
+        if (!$DefaultJsonPath -and $MyInvocation.ScriptName) {
+            $DefaultJsonPath = [System.IO.Path]::Combine($PSScriptRoot,'Defaults.json')
         }
-        catch {
-            throw "Cannot import json file $DefaultJsonPath. $($Error[0].Exception.Message) Invocation stopped."
+        elseif (!$DefaultJsonPath -and !$MyInvocation.ScriptName) {
+            $DefaultJsonPath = [System.IO.Path]::Combine($(Get-Location).Path,'Defaults.json')
         }
+
+        Write-Verbose "Default json path is $DefaultJsonPath."
+        Write-Verbose "Json path is $JsonPath."
+        $SettingsHashTable = [hashtable]::new()
+        if ((Test-Path $DefaultJsonPath)) {
+            try {
+                $global:DefaultSettings = Get-Content -Path $DefaultJsonPath -Raw | ConvertFrom-JSON
+            }
+            catch {
+                throw "Cannot import json file $DefaultJsonPath. $($Error[0].Exception.Message) Invocation stopped."
+            }
+
+            foreach ($NoteProperty in $DefaultSettings.psobject.Properties.name) {
+                $SettingsHashTable.$NoteProperty = $DefaultSettings.$NoteProperty
+            }
+        }
+
 
         try {
             $global:OwnSettings = Get-Content -Path $JsonPath -Raw | ConvertFrom-JSON
         }
         catch {
             throw "Cannot import json file $JsonPath. $($Error[0].Exception.Message) Invocation stopped."
-        }
-
-        $SettingsHashTable = [hashtable]::new()
-        foreach ($NoteProperty in $DefaultSettings.psobject.Properties.name) {
-            $SettingsHashTable.$NoteProperty = $DefaultSettings.$NoteProperty
         }
 
         foreach ($NoteProperty in $OwnSettings.psobject.Properties.name) {
