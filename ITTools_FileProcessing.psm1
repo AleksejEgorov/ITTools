@@ -3,9 +3,9 @@ function Limit-FileSize {
     .SYNOPSIS
         Limit file size.
     .DESCRIPTION
-        If file size is greater than specified (64KB default), file will be renamed 
-        to <FileName>_<datetime>(_<i>).<FileExtension> where <FileName> is original 
-        file name without extension, <datetime> is current date and time in format 
+        If file size is greater than specified (64KB default), file will be renamed
+        to <FileName>_<datetime>(_<i>).<FileExtension> where <FileName> is original
+        file name without extension, <datetime> is current date and time in format
         yyyy-MM-dd_HH_mm, <i> is an iterator (if file name conflict occured), and
         <FileExtension> is orifinal file extension
     .EXAMPLE
@@ -38,7 +38,7 @@ function Limit-FileSize {
         )]
         [long]$MaxSizeKB = 64
     )
-    
+
 
     [long]$MaxLength = $MaxSizeKB * 1024
     Write-Verbose "Max size is $MaxLength"
@@ -51,15 +51,15 @@ function Limit-FileSize {
         }
         catch {
             throw "Cannot get item of $FilePath. Unknown error."
-        }    
+        }
     }
     else {
         throw "Cannot get file $FilePath. Check file path and permissions."
     }
-    
+
 
     Write-Verbose "File size is $($FileItem.Length)"
-    
+
 
     if ($FileItem.Length -ge $MaxLength) {
         $NewNameString = (
@@ -75,14 +75,14 @@ function Limit-FileSize {
                 $FileItem.BaseName +
                 '_' +
                 (Get-Date).ToString('yyyy-MM-dd_HH-mm') +
-                '_' + 
+                '_' +
                 $i +
-                $FileItem.Extension 
+                $FileItem.Extension
             )
             $i++
-        } 
-        Rename-Item $FileItem -NewName $NewNameString 
-    }        
+        }
+        Rename-Item $FileItem -NewName $NewNameString
+    }
 }
 
 
@@ -91,13 +91,13 @@ function Remove-OldFiles {
     .SYNOPSIS
         Remove files older than specified.
     .DESCRIPTION
-        Remove files with last access time older than N days before. 
+        Remove files with last access time older than N days before.
         File names can be specified by wildcard string or regular expression.
     .PARAMETER FileName
         File name sample as System.String. Wildcard spported.
     .PARAMETER RegEx
         Full-powered regular expression to specify file names as System.String.
-    .PARAMETER Directory 
+    .PARAMETER Directory
         Path to directory, where files will be searched as System.String. Default is script root directory.
     .PARAMETER MaxDays
         Nubmer of days before today, to define file as too old. As System.Int32
@@ -156,13 +156,13 @@ function Remove-OldFiles {
         }
         catch {
             throw "Cannot get item of $DirectoryPath . Unknown error."
-        }    
+        }
     }
     else {
         throw "Cannot get directory $DirectoryPath . Check file path and permissions."
     }
 
-    $DirectoryContent = Get-ChildItem -Path $DirectoryItem.FullName -File 
+    $DirectoryContent = Get-ChildItem -Path $DirectoryItem.FullName -File
     if ($FileName) {
         $DirectoryContent | Where-Object {
             ($PSItem.Name -like $FileName) -and `
@@ -190,7 +190,7 @@ function New-TestFile {
         Create file test<Size><Units>.dat of specified size in specified folder.
     .PARAMETER DirectoryPath
         Path to directory, where to create files, as System.String
-    .PARAMETER Size 
+    .PARAMETER Size
         Sizes of required files as array of System.Double.
     .PARAMETER Units
         Units of size as System.String from fixed set (Byte, KB, MB, GB). MB is default.
@@ -245,7 +245,7 @@ function New-TestFile {
         )]
         [string]$Units = 'MB'
     )
-    
+
     begin {
         # $Path is a folder
         if (!(Test-Path -Path $DirectoryPath)) {
@@ -259,21 +259,21 @@ function New-TestFile {
             Default {}
         }
     }
-    
+
     process {
         foreach ($Lenght in $Size) {
             $File = New-Object -TypeName System.IO.FileStream -ArgumentList `
                 (Join-Path -Path $DirectoryPath -ChildPath "test$($Lenght.ToString().Replace('.','').Replace(',',''))$Units.dat"),
                 Create,
                 ReadWrite
-            
+
             $File.SetLength($Lenght * $Factor)
             $File.Close()
         }
     }
-    
+
     end {
-        
+
     }
 }
 
@@ -305,7 +305,7 @@ function Get-FolderSize {
                     $Result = @{
                         'Path' = $Path
                     }
-                    
+
                     if ($HumanFriendly) {
                         $Result.Add('Size (GB)',('{0:N2}' -f ($Measure.Sum / 1Gb)))
                     }
@@ -334,27 +334,54 @@ function Import-JsonSettings {
 
         # Json config path
         [Parameter(
-            Mandatory = $true,
+            Mandatory = $false,
             Position = 2
         )]
-        [string]$JsonPath
+        [string]$JsonPath,
+
+        # Json config path
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [string]$DefaultJsonPath = "$PSScriptRoot\Defaults.json"
     )
 
     begin {
         try {
-            $global:Settings = Get-Content -Path $JsonPath -Raw | ConvertFrom-JSON
+            $global:DefaultSettings = Get-Content -Path $DefaultJsonPath -Raw | ConvertFrom-JSON
+        }
+        catch {
+            throw "Cannot import json file $DefaultJsonPath. $($Error[0].Exception.Message) Invocation stopped."
+        }
+
+        try {
+            $global:OwnSettings = Get-Content -Path $JsonPath -Raw | ConvertFrom-JSON
         }
         catch {
             throw "Cannot import json file $JsonPath. $($Error[0].Exception.Message) Invocation stopped."
         }
+
+        $SettingsHashTable = [hashtable]::new()
+        foreach ($NoteProperty in $DefaultSettings.psobject.Properties.name) {
+            $SettingsHashTable.$NoteProperty = $DefaultSettings.$NoteProperty
+        }
+
+        foreach ($NoteProperty in $OwnSettings.psobject.Properties.name) {
+            $SettingsHashTable.$NoteProperty = $OwnSettings.$NoteProperty
+        }
+
+        $global:Settings = [PSCustomObject]$SettingsHashTable
+
+
+
         if (!$Properties) {
-            $Properties = $global:Settings.psobject.Properties.Name        
+            $Properties = $Settings.psobject.Properties.Name
         }
         $VerboseObject = @()
     }
 
     process {
-        
         foreach ($Property in $Properties) {
             $Value = $Settings.$Property
             # Requested propery must be defined.
@@ -363,9 +390,9 @@ function Import-JsonSettings {
             }
 
             # PSCustomObject to hashtable
-            if ($Value -and ($Value.GetType() -eq [System.Management.Automation.PSCustomObject])) {
+            if ($Value.GetType() -eq [System.Management.Automation.PSCustomObject]) {
                 $ValueObject = $Value
-                
+
                 $Value = [hashtable]::new()
                 foreach ($NoteProperty in $ValueObject.psobject.Properties.name) {
                     $Value.Add($NoteProperty,$ValueObject.$NoteProperty)
@@ -376,7 +403,7 @@ function Import-JsonSettings {
                 New-Variable -Name $Property `
                     -Value $Value `
                     -Scope Global `
-                    -ErrorAction Stop         
+                    -ErrorAction Stop
             }
             catch [System.Management.Automation.SessionStateException] {
                 $global:Error.RemoveAt(0)
@@ -384,7 +411,7 @@ function Import-JsonSettings {
                     -Value $Value `
                     -Scope Global
             }
-            
+
             $VerboseObject += [PSCustomObject]@{
                 Variable = "Variable $Property is "
                 Value = $Value
@@ -395,10 +422,10 @@ function Import-JsonSettings {
     end {
         if ($PSCmdlet.MyInvocation.BoundParameters["Verbose"].IsPresent) {
             $VarWidth = ($VerboseObject.Variable | ForEach-Object {$PSItem.Length} | Measure-Object -Maximum).Maximum + 1
-            
+
             foreach ($Row in $VerboseObject) {
                 Write-Verbose -Message (
-                    ($Row.Variable).PadRight($VarWidth,' ') + 
+                    ($Row.Variable).PadRight($VarWidth,' ') +
                     ': ' +
                     $Row.Value
                 )
