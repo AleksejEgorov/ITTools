@@ -349,7 +349,7 @@ function Import-JsonSettings {
 
     begin {
         if (!$DefaultJsonPath -and $MyInvocation.ScriptName) {
-            $DefaultJsonPath = [System.IO.Path]::Combine($PSScriptRoot,'Defaults.json')
+            $DefaultJsonPath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($MyInvocation.ScriptName),'Defaults.json')
         }
         elseif (!$DefaultJsonPath -and !$MyInvocation.ScriptName) {
             $DefaultJsonPath = [System.IO.Path]::Combine($(Get-Location).Path,'Defaults.json')
