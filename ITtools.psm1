@@ -2008,3 +2008,41 @@ function Invoke-Process {
     return [ProcessInvocationResult]::new($Process)
 
 }
+
+function Get-ErrorInfo {
+    [CmdletBinding()]
+    param (
+        # Error record index. Last is defailt
+        [Parameter(
+            Mandatory = $false,
+            Position = 0
+        )]
+        [int[]]$Index = @(0),
+
+        # Error record object
+        [Parameter(
+            Mandatory = $false,
+            Position = 1,
+            ValueFromPipeline = $true
+        )]
+        [System.Management.Automation.ErrorRecord[]]$ErrorRecord
+    )
+
+    begin {
+        if (!$ErrorRecord) {
+            $ErrorRecord = @($global:Error[$Index])
+        }
+    }
+
+    process {
+        foreach ($Record in $ErrorRecord) {
+            [PSCustomObject]@{
+                Message = $Record.Exception.Message
+                Type = "$($Record.Exception.GetType().NameSpace).$($Record.Exception.GetType().Name)"
+                HResult = $Record.Exception.HResult
+                Position = "$($Record.InvocationInfo.ScriptLineNumber):$($Record.InvocationInfo.OffsetInLine)"
+                Line = $ErrorRecord.InvocationInfo.Line
+            }
+        }
+    }
+}
