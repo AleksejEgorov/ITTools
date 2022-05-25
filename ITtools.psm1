@@ -2046,3 +2046,36 @@ function Get-ErrorInfo {
         }
     }
 }
+
+
+
+function Connect-CMServer {
+    [CmdletBinding()]
+    param (
+        # Primary site server FQDN
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true
+        )]
+        [Alias('DnsHostName')]
+        [string]$ComputerName
+    )
+
+    if (!(Test-Path 'Env:\SMS_ADMIN_UI_PATH')) {
+        Write-Error -Message 'Seems like MECM management console is not installed on this computer.' `
+            -Category ObjectNotFound `
+            -TargetObject 'Env:\SMS_ADMIN_UI_PATH' `
+            -RecommendedAction 'Install management console from cd.latest'
+        return
+    }
+
+    Import-Module ((Split-Path $env:SMS_ADMIN_UI_PATH) + "\ConfigurationManager.psd1") -Scope Global
+    try {
+        Get-PSDrive -Name 'CM' -ErrorAction Stop
+    }
+    catch [System.Management.Automation.DriveNotFoundException] {
+        $Global:Error.RemoveAt(0)
+        New-PSDrive -Name 'CM' -PSProvider "CMSite" -Root $ComputerName -Description "MS MECM" -Scope Global
+    }
+}
