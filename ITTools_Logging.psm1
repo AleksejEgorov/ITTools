@@ -111,19 +111,27 @@ function Write-CMLog {
             # if ($Error -and ($AttemptsLeft -ne 0)) {
             $global:Error.RemoveAt(0)
             # }
-            Start-Sleep -Milliseconds (Get-Random (10..99))
+            Start-Sleep -Milliseconds (Get-Random (50..500))
         }
     }
     if (!$LogSuccess) {
-        Write-Error -Message $global:Error[0].Exception.Message `
-            -Category $global:Error[0].CategoryInfo.Category `
-            -CategoryActivity $global:Error[0].CategoryInfo.Activity `
-            -CategoryReason $global:Error[0].CategoryInfo.Reason`
-            -CategoryTargetName $global:Error[0].CategoryInfo.TargetName`
-            -CategoryTargetType $global:Error[0].CategoryInfo.TargetType `
-            -ErrorId $global:Error[0].FullyQualifiedErrorId `
-            -TargetObject $global:Error[0].TargetObject `
-            -Exception $global:Error[0].Exception
+        $ErrorRecord = $global:Error[0]
+        $ErrorParams = @{}
+
+        switch ($ErrorRecord) {
+            ({$PSItem.Exception.Message}) { $ErrorParams.Add('Message', $ErrorRecord.Exception.Message)}
+            ({$PSItem.CategoryInfo.Category}) { $ErrorParams.Add('Category', $ErrorRecord.CategoryInfo.Category)}
+            ({$PSItem.CategoryInfo.Activity}) { $ErrorParams.Add('CategoryActivity', $ErrorRecord.CategoryInfo.Activity)}
+            ({$PSItem.CategoryInfo.Reason}) { $ErrorParams.Add('CategoryReason', $ErrorRecord.CategoryInfo.Reason)}
+            ({$PSItem.CategoryInfo.TargetName}) { $ErrorParams.Add('CategoryTargetName', $ErrorRecord.CategoryInfo.TargetName)}
+            ({$PSItem.CategoryInfo.TargetType}) { $ErrorParams.Add('CategoryTargetType', $ErrorRecord.CategoryInfo.TargetType)}
+            ({$PSItem.FullyQualifiedErrorId}) { $ErrorParams.Add('ErrorId', $ErrorRecord.FullyQualifiedErrorId)}
+            ({$PSItem.TargetObject}) { $ErrorParams.Add('TargetObject', $ErrorRecord.TargetObject)}
+            ({$PSItem.Exception}) { $ErrorParams.Add('Exception', $ErrorRecord.Exception)}
+            Default {}
+        }
+
+        Write-Error @ErrorParams
     }
 }
 
