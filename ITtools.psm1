@@ -2058,8 +2058,15 @@ function Connect-CMServer {
             Position = 0,
             ValueFromPipeline = $true
         )]
-        [Alias('DnsHostName')]
-        [string]$ComputerName
+        [Alias('DnsHostName','ComputerName')]
+        [string]$SiteServer,
+
+        # SMS site code
+        [Parameter(
+            Mandatory = $false,
+            Position = 1
+        )]
+        [string]$SiteCode = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\SMS\Mobile Client").AssignedSiteCode
     )
 
     if (!(Test-Path 'Env:\SMS_ADMIN_UI_PATH')) {
@@ -2072,10 +2079,10 @@ function Connect-CMServer {
 
     Import-Module ((Split-Path $env:SMS_ADMIN_UI_PATH) + "\ConfigurationManager.psd1") -Scope Global
     try {
-        Get-PSDrive -Name 'CM' -ErrorAction Stop
+        Get-PSDrive -Name $SiteCode -ErrorAction Stop -Scope Global
     }
     catch [System.Management.Automation.DriveNotFoundException] {
         $Global:Error.RemoveAt(0)
-        New-PSDrive -Name 'CM' -PSProvider "CMSite" -Root $ComputerName -Description "MS MECM" -Scope Global
+        New-PSDrive -Name $SiteCode -PSProvider "CMSite" -Root $SiteServer -Description "MS MECM" -Scope Global
     }
 }
