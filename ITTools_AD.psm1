@@ -766,3 +766,36 @@ function Get-ADGroupUsers {
 
     end {}
 }
+
+function Set-ADThumbnailPhoto {
+    [CmdletBinding()]
+    param (
+        # AD object distinguishedName
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('DistinguishedName')]
+        [string]$Identity,
+
+        # Photo path
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [string]$Path,
+
+        [switch]$Jpeg
+    )
+
+    $PhotoItem = Get-Item $Path -ErrorAction Stop
+    $ADObject = Get-ADObject -Identity $Identity -Properties thumbnailPhoto,jpegPhoto -ErrorAction Stop
+
+    $ADObject.thumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 96 -Quality 96))
+    if ($Jpeg) {
+        $ADObject.jpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 256 -Quality 96))
+    }
+    Set-ADObject -Instance $ADObject
+}
