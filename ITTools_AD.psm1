@@ -767,7 +767,7 @@ function Get-ADGroupUsers {
     end {}
 }
 
-function Set-ADThumbnailPhoto {
+function Set-ADUserThumbnailPhoto {
     [CmdletBinding()]
     param (
         # AD object distinguishedName
@@ -791,11 +791,47 @@ function Set-ADThumbnailPhoto {
     )
 
     $PhotoItem = Get-Item $Path -ErrorAction Stop
-    $ADObject = Get-ADObject -Identity $Identity -Properties thumbnailPhoto,jpegPhoto -ErrorAction Stop
+    $ADUser = Get-ADUser -Identity $Identity -ErrorAction Stop
 
-    $ADObject.thumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 96 -Quality 96))
+    $ThumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 96 -Quality 96))
+    Set-ADUser -Identity $ADUser -Replace @{thumbnailPhoto = $ThumbnailPhoto}
     if ($Jpeg) {
-        $ADObject.jpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 256 -Quality 96))
+        $JpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 256 -Quality 96))
+        Set-ADUser -Identity $ADUser -Replace @{jpegPhoto = $JpegPhoto}
     }
-    Set-ADObject -Instance $ADObject
 }
+
+function Set-ADGroupThumbnailPhoto {
+    [CmdletBinding()]
+    param (
+        # AD object distinguishedName
+        [Parameter(
+            Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('DistinguishedName')]
+        [string]$Identity,
+
+        # Photo path
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [string]$Path,
+
+        [switch]$Jpeg
+    )
+
+    $PhotoItem = Get-Item $Path -ErrorAction Stop
+    $ADGroup = Get-ADGroup -Identity $Identity -ErrorAction Stop
+
+    $ThumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 96 -Quality 96))
+    Set-ADGroup -Identity $ADGroup -Replace @{thumbnailPhoto = $ThumbnailPhoto}
+    if ($Jpeg) {
+        $JpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 256 -Quality 96))
+        Set-ADGroup -Identity $ADGroup -Replace @{jpegPhoto = $JpegPhoto}
+    }
+}
+
