@@ -1082,9 +1082,9 @@ function Get-SmtpLog {
 
 
     # the user may have more than one server associated, get list of all mail servers ips
-    $Query="SELECT DISTINCT c-ip FROM $LogFilePath WHERE cs-uri-query LIKE '%$SearchString%'";
-
-    $IPs = logparser -i:W3C -q:ON $Query;
+    $Query = "SELECT DISTINCT c-ip FROM $LogFilePath WHERE cs-uri-query LIKE '%$SearchString%'"
+    Write-Verbose "[COMND] LogParser.exe -i:W3C -q:ON `"$Query`""
+    $IPs = LogParser.exe -i:W3C -q:ON $Query;
 
     if(!$IPs){
         Write-Host "Address not found.`n" -b black -f red;
@@ -1094,35 +1094,37 @@ function Get-SmtpLog {
     # foreach ip returned emit the session
 
     foreach ($IP in $IPs) {
-        $Skip = $false
+        # $Skip = $false
         Write-Verbose "Processing IP $IP."
 
-        $IpQuery = "SELECT date,time,c-ip,cs-method,cs-uri-query FROM $LogFilePath WHERE c-ip = '$IP'";
+        $IpQuery = "SELECT date,time,c-ip,cs-method,cs-uri-query FROM $LogFilePath WHERE c-ip = '$IP'"
         Write-Verbose "[QUERY] $IpQuery"
+        Write-Verbose "[COMND] LogParser.exe -i:W3C -q:ON `"$IpQuery`""
 
-        $ParseResult = LogParser.exe -i:W3C -q:ON $IpQuery;
+        $ParseResult = LogParser.exe -i:W3C $IpQuery
+        Write-Debug "ParseResult for $IP done OK. Found $($ParseResult.Count) records."
         Write-Verbose "$($ParseResult.Count) records found"
 
         # set start anchors where line matches "220+" (session starts)
-        $SessionNumbers=@();
+        $SessionStartLines=@();
 
         for($i = 0; $i -lt $ParseResult.Count; $i++) {
             if ($ParseResult[$i] -match "-\s+220\+") {
-                $SessionNumbers += $i
+                $SessionStartLines += $i
             }
         }
-        $SessionNumbers += $ParseResult.Count;
+        $SessionStartLines += $ParseResult.Count;
 
-        if ($SessionNumbers.Count -eq 0){
+        if ($SessionStartLines.Count -eq 0){
             write-host "`nNo sessions found for <$IP>`n" -ForegroundColor red;
-            return;
+            continue;
         }
 
         switch ($Display) {
             'All' {$UserOnly = $false}
             'User' {$UserOnly = $true}
             default {
-                $Key = Read-Host "Found $($SessionNumbers.Count) sessions for <$IP>.`nDisplay User sessions, All sessions, or None [U/a/n]";
+                $Key = Read-Host "Found $($SessionStartLines.Count) sessions total for <$IP>.`nDisplay User sessions, All sessions, or None [U/a/n]";
                 switch ($Key) {
                     'A' {$UserOnly = $false}
                     'U' {$UserOnly = $true}
@@ -1136,12 +1138,12 @@ function Get-SmtpLog {
             continue
         }
 
-        for ($i=0; $i -lt ($SessionNumbers.Count - 1); $i++) {
+        for ($i=0; $i -lt ($SessionStartLines.Count - 1); $i++) {
             # slice array
-            $SessionStrings = $ParseResult[$SessionNumbers[$i]..$($SessionNumbers[$i+1]-1)];
+            $SessionStrings = $ParseResult[$SessionStartLines[$i]..$($SessionStartLines[$i+1]-1)];
 
 
-            if ($SessionStrings -and ($i -lt $SessionNumbers.Count)) {
+            if ($SessionStrings -and ($i -lt $SessionStartLines.Count)) {
                 if ($UserOnly -and !($SessionStrings | Where-Object {$PSItem -Match $SearchRegex})) {
                     continue
                 }
