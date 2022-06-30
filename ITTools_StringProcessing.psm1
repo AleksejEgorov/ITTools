@@ -186,7 +186,7 @@ function New-Password {
         #     $RandomIndex = [System.Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $CharacterList.Length)
         #     $Passwd += $CharacterList[$RandomIndex]
         # }
-        0..$Length | ForEach-Object {
+        0..($Length - 1) | ForEach-Object {
             $Passwd += $CharacterList | Get-Random
         }
 
