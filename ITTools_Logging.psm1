@@ -1101,7 +1101,7 @@ function Get-SmtpLog {
         Write-Verbose "[QUERY] $IpQuery"
         Write-Verbose "[COMND] LogParser.exe -i:W3C -q:ON `"$IpQuery`""
 
-        $ParseResult = LogParser.exe -i:W3C $IpQuery
+        $ParseResult = LogParser.exe -i:W3C -q:ON $IpQuery
         Write-Debug "ParseResult for $IP done OK. Found $($ParseResult.Count) records."
         Write-Verbose "$($ParseResult.Count) records found"
 
