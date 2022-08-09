@@ -2086,3 +2086,38 @@ function Connect-CMServer {
         New-PSDrive -Name $SiteCode -PSProvider "CMSite" -Root $SiteServer -Description "MS MECM" -Scope Global
     }
 }
+
+
+
+
+function Get-NetShare {
+    [CmdletBinding()]
+    param (
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [string[]]$ComputerName
+    )
+
+    begin {}
+
+    process {
+        foreach ($Computer in $ComputerName) {
+            $Result = @()
+            (net view "\\$Computer" | Where-Object {$PSItem -match '\sDisk\s'}) -replace '\s\s+', ';' | ForEach-Object {
+                $Result += [pscustomobject]@{
+                    ComputerName = $Computer
+                    ShareName = $PSItem.Split(';')[0]
+                    Type = $PSItem.Split(';')[1]
+                    Comment = $PSItem.Split(';')[2]
+                }
+            }
+            $Result
+        }
+    }
+
+    end {}
+}
