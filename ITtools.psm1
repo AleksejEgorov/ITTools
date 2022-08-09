@@ -2107,7 +2107,8 @@ function Get-NetShare {
     process {
         foreach ($Computer in $ComputerName) {
             $Result = @()
-            (net view "\\$Computer" | Where-Object {$PSItem -match '\sDisk\s'}) -replace '\s\s+', ';' | ForEach-Object {
+            
+            (net view "\\$Computer" /All | Where-Object {$PSItem -match '\s(Disk|Диск)\s'}) -replace '\s\s+', ';' | ForEach-Object {
                 $Result += [pscustomobject]@{
                     ComputerName = $Computer
                     ShareName = $PSItem.Split(';')[0]
