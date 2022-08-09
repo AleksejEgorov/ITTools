@@ -2099,7 +2099,9 @@ function Get-NetShare {
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true
         )]
-        [string[]]$ComputerName
+        [string[]]$ComputerName,
+
+        [switch]$All
     )
 
     begin {}
@@ -2107,16 +2109,28 @@ function Get-NetShare {
     process {
         foreach ($Computer in $ComputerName) {
             $Result = @()
-            
-            (net view "\\$Computer" /All | Where-Object {$PSItem -match '\s(Disk|Диск)\s'}) -replace '\s\s+', ';' | ForEach-Object {
-                $Result += [pscustomobject]@{
-                    ComputerName = $Computer
-                    ShareName = $PSItem.Split(';')[0]
-                    Type = $PSItem.Split(';')[1]
-                    Comment = $PSItem.Split(';')[2]
-                }
+            $ArgList = @('/c','net','view','\\advmecm')
+
+            if ($All) {
+                $ArgList += '/All'
             }
-            $Result
+
+            $ProcessResult = Invoke-Process -Command cmd.exe -ArgumentList $ArgList
+
+            if ($ProcessResult.ExitCode -eq 0) {
+                ($ProcessResult.StdOut | Where-Object {$PSItem -match '\s(Disk|Диск)\s'}) -replace '\s\s+', ';' | ForEach-Object {
+                    $Result += [pscustomobject]@{
+                        ComputerName = $Computer
+                        ShareName = $PSItem.Split(';')[0]
+                        Type = $PSItem.Split(';')[1]
+                        Comment = $PSItem.Split(';')[2]
+                    }
+                }
+                $Result
+            }
+            else {
+                Write-Error -Message $ProcessResult.StdErr -ErrorId $ProcessResult.ExitCode -TargetObject $Computer
+            }
         }
     }
 
