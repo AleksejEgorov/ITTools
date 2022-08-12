@@ -131,6 +131,14 @@ function Write-CMLog {
             Default {}
         }
 
+        if (!$ErrorParams.Message) {
+            $ErrorParams.Add('Message', $Error[0].Exception.Message)
+        }
+
+        if (!$ErrorParams.Message) {
+            $ErrorParams.Add('Message', $global:Error[0].Exception.Message)
+        }
+
         Write-Error @ErrorParams
     }
 }
