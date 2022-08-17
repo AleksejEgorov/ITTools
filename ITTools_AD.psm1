@@ -752,19 +752,66 @@ function Get-ADGroupUsers {
         [string]$Domain = (& {Get-ADDomain}).DnsRoot
     )
 
-    begin {}
+    begin {
+        $Adsi = [adsi]"LDAP://$Domain"
+        $AdsiSearcher = [adsisearcher]$Adsi
+        $Result = @()
+    }
 
     process {
         foreach ($GroupName in $Name) {
-            foreach ($Member in (Get-ADGroupMember $GroupName -Recursive -Server $Domain)) {
-                $MemberDomain = ($Member.DistinguishedName -replace ",DC=",'!').Split('!')
-                $MemberDomain = $MemberDomain[1..($domain.Length - 1)] -join '.'
-                Get-ADUser -Identity $Member.SamAccountName -Server $MemberDomain -Properties $Properties
+            $MemberDNs = $null
+            $AdsiSearcher.Filter = "(&(objectClass=group)(cn=$GroupName))"
+            $MemberDNs = $AdsiSearcher.FindOne().GetDirectoryEntry().Member
+            Write-Debug "Error on 765"
+
+            foreach ($MemberDN in $MemberDNs) {
+                Write-Verbose "Processing member $MemberDN"
+                $AdsiSearcher.Filter = "(distinguishedName=$MemberDN)"
+                $AdsiObject = $AdsiSearcher.FindOne().GetDirectoryEntry()
+
+                if ($AdsiObject.objectClass -contains 'user') {
+                    $Result += Get-ADUser -Identity $MemberDN -Properties $Properties -Server $Domain
+                }
+
+                elseif ($AdsiObject.objectClass -contains 'foreignSecurityPrincipal') {
+                    Write-Debug "foreignSecurityPrincipal detected."
+                    $ReadableName = ([System.Security.Principal.SecurityIdentifier]($AdsiObject.cn.ToString())).Translate([System.Security.Principal.NTAccount]).Value
+                    $RemoteName = $ReadableName.Split('\')[1]
+                    $RemoteDomain = Get-ADDomain $ReadableName.Split('\')[0]
+                    $RemoteAdsi = [adsi]"LDAP://$($RemoteDomain.DNSRoot)"
+                    $RemoteSearcher = [adsisearcher]$RemoteAdsi
+                    $RemoteSearcher.Filter = "(sAMAccountName=$RemoteName)"
+                    $RemoteObject = $RemoteSearcher.FindOne().GetDirectoryEntry()
+                    Write-Debug "foreignSecurityPrincipal remote properties."
+
+
+                    if ($RemoteObject.objectClass -contains 'user') {
+                        $Result += Get-ADUser -Identity $RemoteName -Properties $Properties -Server $RemoteDomain.DNSRoot
+                    }
+                    elseif ($RemoteObject.objectClass -contains 'group') {
+                        $Result += Get-ADGroupUsers -Name $RemoteName -Domain $RemoteDomain.DNSRoot -Properties $Properties
+                    }
+                }
+                elseif ($AdsiObject.objectClass -contains 'group') {
+                    $Result += Get-ADGroupUsers -Name $AdsiObject.Name -Domain $Domain -Properties $Properties
+                }
+
+                elseif ($AdsiObject.objectClass -contains 'contact') {
+                    $Result +=  Get-ADObject $MemberDN -Server $Domain -Properties $Properties
+                }
+
+                else {
+                    Write-Warning "$($AdsiObject.DistinguishedName) has unprocessed object class $($AdsiObject.objectClass -join ',')!"
+                    $Result += Get-ADObject $MemberDN -Server $Domain
+                }
             }
         }
     }
 
-    end {}
+    end {
+        return $Result
+    }
 }
 
 function Set-ADUserThumbnailPhoto {
