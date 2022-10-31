@@ -749,11 +749,12 @@ function Get-ADGroupUsers {
             Mandatory = $false,
             Position = 2
         )]
-        [string]$Domain = (& {Get-ADDomain}).DnsRoot
+        [Alias('Domain')]
+        [string]$Server = (& {Get-ADDomain}).DnsRoot
     )
 
     begin {
-        $Adsi = [adsi]"LDAP://$Domain"
+        $Adsi = [adsi]"LDAP://$Server"
         $AdsiSearcher = [adsisearcher]$Adsi
         $Result = @()
     }
@@ -771,7 +772,7 @@ function Get-ADGroupUsers {
                 $AdsiObject = $AdsiSearcher.FindOne().GetDirectoryEntry()
 
                 if ($AdsiObject.objectClass -contains 'user') {
-                    $Result += Get-ADUser -Identity $MemberDN -Properties $Properties -Server $Domain
+                    $Result += Get-ADUser -Identity $MemberDN -Properties $Properties -Server $Server
                 }
 
                 elseif ($AdsiObject.objectClass -contains 'foreignSecurityPrincipal') {
@@ -794,16 +795,16 @@ function Get-ADGroupUsers {
                     }
                 }
                 elseif ($AdsiObject.objectClass -contains 'group') {
-                    $Result += Get-ADGroupUsers -Name $AdsiObject.Name -Domain $Domain -Properties $Properties
+                    $Result += Get-ADGroupUsers -Name $AdsiObject.Name -Domain $Server -Properties $Properties
                 }
 
                 elseif ($AdsiObject.objectClass -contains 'contact') {
-                    $Result +=  Get-ADObject $MemberDN -Server $Domain -Properties $Properties
+                    $Result +=  Get-ADObject $MemberDN -Server $Server -Properties $Properties
                 }
 
                 else {
                     Write-Warning "$($AdsiObject.DistinguishedName) has unprocessed object class $($AdsiObject.objectClass -join ',')!"
-                    $Result += Get-ADObject $MemberDN -Server $Domain
+                    $Result += Get-ADObject $MemberDN -Server $Server
                 }
             }
         }
