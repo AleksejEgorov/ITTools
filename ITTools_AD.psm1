@@ -750,7 +750,9 @@ function Get-ADGroupUsers {
             Position = 2
         )]
         [Alias('Domain')]
-        [string]$Server = (& {Get-ADDomain}).DnsRoot
+        [string]$Server = (& {Get-ADDomain}).DnsRoot,
+
+        [switch]$DirectOnly
     )
 
     begin {
@@ -764,7 +766,6 @@ function Get-ADGroupUsers {
             $MemberDNs = $null
             $AdsiSearcher.Filter = "(&(objectClass=group)(cn=$GroupName))"
             $MemberDNs = $AdsiSearcher.FindOne().GetDirectoryEntry().Member
-            Write-Debug "Error on 765"
 
             foreach ($MemberDN in $MemberDNs) {
                 Write-Verbose "Processing member $MemberDN"
@@ -791,11 +792,15 @@ function Get-ADGroupUsers {
                         $Result += Get-ADUser -Identity $RemoteName -Properties $Properties -Server $RemoteDomain.DNSRoot
                     }
                     elseif ($RemoteObject.objectClass -contains 'group') {
-                        $Result += Get-ADGroupUsers -Name $RemoteName -Domain $RemoteDomain.DNSRoot -Properties $Properties
+                        if (!$DirectOnly) {
+                            $Result += Get-ADGroupUsers -Name $RemoteName -Domain $RemoteDomain.DNSRoot -Properties $Properties                            
+                        }
                     }
                 }
                 elseif ($AdsiObject.objectClass -contains 'group') {
-                    $Result += Get-ADGroupUsers -Name $AdsiObject.Name -Domain $Server -Properties $Properties
+                    if (!$DirectOnly) {
+                        $Result += Get-ADGroupUsers -Name $AdsiObject.Name -Domain $Server -Properties $Properties
+                    }
                 }
 
                 elseif ($AdsiObject.objectClass -contains 'contact') {
