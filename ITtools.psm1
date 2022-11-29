@@ -656,8 +656,9 @@ function Get-LoggedInUsers {
 function New-ShadowConnection {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$ComputerName
+        [string]$ComputerName,
 
+        [switch]$ViewOnly
     )
     $Sessions = @()
     Get-QWinSta $ComputerName | Where-Object {$PSItem.State -eq "Active"} | ForEach-Object {$Sessions += $PSItem}
@@ -672,9 +673,11 @@ function New-ShadowConnection {
     $ArgList = @(
         "/v:$ComputerName",
         "/shadow:$SessionID",
-        "/Control",
         "/NoConsentPrompt"
     )
+    if (!$ViewOnly) {
+        $ArgList += "/Control"
+    }
     Start-Process mstsc.exe -ArgumentList $ArgList
 }
 
