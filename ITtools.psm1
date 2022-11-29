@@ -1964,7 +1964,7 @@ function New-ExchangeSession {
             $global:Exchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri http://$ExchangeServer/PowerShell/ -Authentication Kerberos
         }
         catch {
-            throw $Error[0].Exception.Message
+            throw $Error[0]
         }
     }
     else {
