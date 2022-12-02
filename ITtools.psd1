@@ -12,7 +12,7 @@
 RootModule = 'ITtools.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.24.0.76'
+ModuleVersion = '1.25.0.82'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@ Author = 'Aleksej Egorov'
 CompanyName = 'Private person'
 
 # Copyright statement for this module
-Copyright = '(c) 2021 Aleksej Egorov. All rights reserved.'
+Copyright = '(c) 2022 Aleksej Egorov. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Tools collection for daily admin tasks.'
@@ -70,7 +70,8 @@ NestedModules = @('ITTools_Classes.psm1',
                'ITTools_AD.psm1', 
                'ITTools_Logging.psm1', 
                'ITTools_FileProcessing.psm1', 
-               'ITTools_StringProcessing.psm1')
+               'ITTools_StringProcessing.psm1',
+               'ITTools_Communications.psm1')
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = '*'
@@ -111,7 +112,8 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = '1.24.0.76 (09.08.2022): Get-NetShare added.
+        ReleaseNotes = '1.25.0.82 (01.12.2022): ITTools_Communications is separated.
+1.24.0.76 (09.08.2022): Get-NetShare added.
 1.23.0.75 (01.06.2022): Some cmdlets added.
 1.22.2.74 (28.03.2022): New-ExchangeSession is multidomain.
 1.22.1.73 (24.03.2022): Get-GPOStatus: Links disabled fixed.
