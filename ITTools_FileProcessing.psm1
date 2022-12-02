@@ -327,7 +327,7 @@ function Import-JsonSettings {
         # Json config path
         [Parameter(
             Mandatory = $true,
-            Position = 2
+            Position = 1
         )]
         [string]$JsonPath,
 
