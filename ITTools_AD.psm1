@@ -777,9 +777,24 @@ function Get-ADGroupUsers {
                 }
 
                 elseif ($AdsiObject.objectClass -contains 'foreignSecurityPrincipal') {
+
                     Write-Debug "foreignSecurityPrincipal detected."
-                    $ReadableName = ([System.Security.Principal.SecurityIdentifier]($AdsiObject.cn.ToString())).Translate([System.Security.Principal.NTAccount]).Value
+                    try {
+                        $ReadableName = ([System.Security.Principal.SecurityIdentifier]($AdsiObject.cn.ToString())).Translate([System.Security.Principal.NTAccount]).Value
+                    }
+                    catch {
+                        Write-Warning "Cannot translate foreign security principal in domain $Server : $($AdsiObject.cn.ToString())"
+                        continue
+                    }
+
                     $RemoteName = $ReadableName.Split('\')[1]
+                    try {
+                        $RemoteDomain = Get-ADDomain $ReadableName.Split('\')[0]
+                    }
+                    catch {
+                        Write-Warning "Cannot contact remote domain $($ReadableName.Split('\')[0]) to find user $RemoteName. $($Error[0].Exception.Message) "
+                        continue
+                    }
                     $RemoteDomain = Get-ADDomain $ReadableName.Split('\')[0]
                     $RemoteAdsi = [adsi]"LDAP://$($RemoteDomain.DNSRoot)"
                     $RemoteSearcher = [adsisearcher]$RemoteAdsi
