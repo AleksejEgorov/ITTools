@@ -446,3 +446,67 @@ function Import-JsonSettings {
         return
     }
 }
+
+
+function Remove-EmptyFolders {
+        <#
+    .SYNOPSIS
+        Recursively remove empty folders
+    .DESCRIPTION
+        Recursively remove empty folders, include or exclude root
+    .PARAMETER Path
+        Pathes to directories, where to remove.
+    .INPUTS
+        Path as System.String[]
+    .OUTPUTS
+        None. Remove-EmptyFolders don't return anything
+    .EXAMPLE
+        PS> Remove-EmptyFolders -Path C:\Test
+        Recursively remove empty folders in C:\Test
+    .EXAMPLE
+        PS> New-TestFile C:\Test 0.5 KB
+        Create file test05KB.dat size of 512 bytes (0.5KB) in C:\Test
+    .EXAMPLE
+        New-TestFile . 5
+        Create file test5MB.dat size of 5MB in current directory
+    .EXAMPLE
+        PS> New-TestFile . @(5,10,20)
+        Create files test5MB.dat (size of 5MB), test10MB.dat (size of 10MB) and test20MB.dat (size of 20MB) in current directory
+    .EXAMPLE
+        PS> 1..3 | New-TestFile -DirectoryPath C:\TestFiles -Units GB
+        Create files test1GB.dat (size of 1GB), test2GB.dat (size of 2GB) and test3GB.dat (size of 3GB) in directory C:\TestFiles
+    #>
+    param (
+        # Path to search
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('FullName','PSPath')]
+        [string[]]$Path,
+
+        # Dont remove root folder
+        [switch]$SaveRoot
+    )
+
+    begin {}
+
+    process {
+        foreach ($Item in $Path) {
+            foreach ($ChildFolder in (Get-ChildItem -Force -LiteralPath $Item -Directory)) {
+                Remove-EmptyFolders -Path $ChildFolder.FullName
+            }
+
+            if (!(Get-ChildItem -Force -LiteralPath $Item) -and !$SaveRoot) {
+                Write-Verbose "Removing empty folder at path '$Item'."
+                Remove-Item -Force -LiteralPath $Item
+            }
+        }
+    }
+
+    end {
+        return
+    }
+}
