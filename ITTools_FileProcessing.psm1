@@ -488,7 +488,14 @@ function Remove-EmptyFolders {
         [string[]]$Path,
 
         # Dont remove root folder
-        [switch]$SaveRoot
+        [switch]$SaveRoot,
+
+        # Path to log file
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$LogFilePath
+
     )
 
     begin {}
@@ -501,7 +508,14 @@ function Remove-EmptyFolders {
 
             if (!(Get-ChildItem -Force -LiteralPath $Item) -and !$SaveRoot) {
                 Write-Verbose "Removing empty folder at path '$Item'."
-                Remove-Item -Force -LiteralPath $Item
+                try {
+                    Remove-Item -Force -LiteralPath $Item
+                    Write-CMLog -LogFilePath $LogFilePath -Level Info -Message "Empty folder $($Item.FullName) removed."
+                }
+                catch {
+                    Write-CMLog -LogFilePath $LogFilePath -Level Info -Message "Cannot remove empty folder $($Item.FullName). $($Error[0].Exception.Message)"
+                    throw
+                }
             }
         }
     }
