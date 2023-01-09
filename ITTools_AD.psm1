@@ -506,7 +506,7 @@ function Get-ADLockSource {
 ##############################################################
 ####              Get password experation date            ####
 ##############################################################
-function Get-PasswordExperationDate {
+function Get-ADPasswordExperationDate {
     [CmdletBinding()]
     param (
         # Username list
@@ -516,15 +516,15 @@ function Get-PasswordExperationDate {
             ValueFromPipelineByPropertyName = $true,
             Position = 0
         )]
-        [string[]]$SamAccountName,
+        [Alias('DistinguishedName')]
+        [string]$Identity,
 
         # Domain to search. Own at default
         [Parameter(
             Mandatory = $false
         )]
-        [string]$Domain = ($env:USERDNSDOMAIN).ToLower(),
-
-        [string]$Server = (& {Get-ADDomainController}).HostName
+        [Alias('Domain')]
+        [string]$Server = ($env:USERDNSDOMAIN).ToLower()
     )
 
     begin {
@@ -534,13 +534,13 @@ function Get-PasswordExperationDate {
     }
 
     process {
-        foreach ($User in $SamAccountName) {
+        foreach ($User in $Identity) {
             Write-Debug "Processing $User"
             try {
                 $ADUser = Get-ADUser -Identity $User -Properties PasswordLastSet,msDS-UserPasswordExpiryTimeComputed,PasswordNeverExpires,Enabled -Server $Server
             }
             catch {
-                Write-Error -Message "User $User not found in domain $Domain" `
+                Write-Error -Message "User $User not found on server $Server" `
                     -Category ObjectNotFound `
                     -RecommendedAction "Check if username existing." `
                     -TargetObject "$User" `
@@ -571,6 +571,9 @@ function Get-PasswordExperationDate {
                     }
                 }
                 PasswordNeverExpires = $ADUser.PasswordNeverExpires
+                DistinguishedName = $ADUser.DistinguishedName
+                SID = $ADUser.SID
+                ObjectGUID = $ADUser.ObjectGUID
             }
             Set-StrictMode -Off
         }
