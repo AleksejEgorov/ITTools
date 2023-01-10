@@ -519,9 +519,17 @@ function Get-ADPasswordExperationDate {
         [Alias('DistinguishedName')]
         [string]$Identity,
 
+        # Properties list
+        [Parameter(
+            Mandatory = $false,
+            Position = 1
+        )]
+        [string[]]$Properties,
+
         # Domain to search. Own at default
         [Parameter(
-            Mandatory = $false
+            Mandatory = $false,
+            Position = 2
         )]
         [Alias('Domain')]
         [string]$Server = ($env:USERDNSDOMAIN).ToLower()
@@ -531,25 +539,34 @@ function Get-ADPasswordExperationDate {
         Import-Module ActiveDirectory
         $Result = @()
         Write-Debug "Begin done"
+        $RequestedProperties = @(
+            'Name',
+            'SamAccountName'
+            'PasswordLastSet',
+            'msDS-UserPasswordExpiryTimeComputed',
+            'PasswordNeverExpires',
+            'Enabled'
+        )
+        foreach ($Property in $Properties) {
+            $RequestedProperties += $Property
+        }
     }
 
     process {
         foreach ($User in $Identity) {
             Write-Debug "Processing $User"
             try {
-                $ADUser = Get-ADUser -Identity $User -Properties PasswordLastSet,msDS-UserPasswordExpiryTimeComputed,PasswordNeverExpires,Enabled -Server $Server
+                $ADUser = Get-ADUser -Identity $User -Properties $RequestedProperties -Server $Server -ErrorAction Stop
             }
             catch {
-                Write-Error -Message "User $User not found on server $Server" `
-                    -Category ObjectNotFound `
-                    -RecommendedAction "Check if username existing." `
-                    -TargetObject "$User" `
-                    -ErrorId 1
+                # $Error[0]
+                Write-Error -ErrorRecord $global:Error[0]
                 continue
             }
 
             Set-StrictMode -Version Latest
-            $Result += [PSCustomObject]@{
+            $ResultObject = [PSCustomObject]@{
+                DistinguishedName = $ADUser.DistinguishedName
                 Name = $ADUser.Name
                 SamAccountName = $ADUser.SamAccountName
                 Enabled = $ADUser.Enabled
@@ -571,11 +588,14 @@ function Get-ADPasswordExperationDate {
                     }
                 }
                 PasswordNeverExpires = $ADUser.PasswordNeverExpires
-                DistinguishedName = $ADUser.DistinguishedName
-                SID = $ADUser.SID
-                ObjectGUID = $ADUser.ObjectGUID
             }
             Set-StrictMode -Off
+
+            foreach ($Property in $Properties) {
+                Add-Member -InputObject $ResultObject -MemberType NoteProperty -Name $Property -Value $ADUser.$Property
+            }
+
+            $Result += $ResultObject
         }
     }
 
