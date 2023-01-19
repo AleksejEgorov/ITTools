@@ -360,10 +360,13 @@ function Import-JsonSettings {
         $SettingsHashTable = [hashtable]::new()
         if ((Test-Path $DefaultJsonPath)) {
             try {
-                $global:DefaultSettings = Get-Content -Path $DefaultJsonPath -Raw | ConvertFrom-JSON
+                # https://stackoverflow.com/questions/51066978/convert-to-json-with-comments-from-powershell
+                $global:DefaultSettings = (Get-Content -Path $DefaultJsonPath -Raw -ErrorAction Stop)`
+                    -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' `
+                    -replace '(?ms)/\*.*?\*/' | ConvertFrom-JSON -ErrorAction Stop
             }
             catch {
-                throw "Cannot import json file $DefaultJsonPath. $($Error[0].Exception.Message) Invocation stopped."
+                throw $Error[0]
             }
 
             foreach ($NoteProperty in $DefaultSettings.psobject.Properties.name) {
@@ -373,10 +376,13 @@ function Import-JsonSettings {
 
 
         try {
-            $global:OwnSettings = Get-Content -Path $JsonPath -Raw | ConvertFrom-JSON
+            # https://stackoverflow.com/questions/51066978/convert-to-json-with-comments-from-powershell
+            $global:OwnSettings = (Get-Content -Path $JsonPath -Raw -ErrorAction Stop) `
+                -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' `
+                -replace '(?ms)/\*.*?\*/' | ConvertFrom-JSON -ErrorAction Stop
         }
         catch {
-            throw "Cannot import json file $JsonPath. $($Error[0].Exception.Message) Invocation stopped."
+            throw $Error[0]
         }
 
         foreach ($NoteProperty in $OwnSettings.psobject.Properties.name) {
