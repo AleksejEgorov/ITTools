@@ -94,7 +94,7 @@ function Write-CMLog {
     # Write the line to the log file
     [bool]$LogSuccess = $false
     $AttemptsLeft = 10
-    if ($PSVersionTable.PSVersion -ge [version]'6.0.0') {
+    if ($PSVersionTable.PSVersion -ge ([version]'6.0.0')) {
         $Encoding = 'utf8bom'
     }
     else {
@@ -108,14 +108,12 @@ function Write-CMLog {
         }
         catch {
             $AttemptsLeft--
-            
             $global:Error.RemoveAt(0)
-            
-            Start-Sleep -Milliseconds (Get-Random (100..500))
+            Start-Sleep -Milliseconds (Get-Random (200..500))
         }
     }
     if (!$LogSuccess) {
-        Write-Error -ErrorRecord $Error[0]
+        Write-Error -ErrorRecord $global:Error[0]
     }
 }
 
