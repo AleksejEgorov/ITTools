@@ -108,38 +108,13 @@ function Write-CMLog {
         }
         catch {
             $AttemptsLeft--
-            # if ($Error -and ($AttemptsLeft -ne 0)) {
+            
             $global:Error.RemoveAt(0)
-            # }
-            Start-Sleep -Milliseconds (Get-Random (50..500))
+            
+            Start-Sleep -Milliseconds (Get-Random (100..500))
         }
     }
     if (!$LogSuccess) {
-        # $ErrorRecord = $global:Error[0]
-        # $ErrorParams = @{}
-
-        # switch ($ErrorRecord) {
-        #     ({$PSItem.Exception.Message}) { $ErrorParams.Add('Message', $ErrorRecord.Exception.Message)}
-        #     ({$PSItem.CategoryInfo.Category}) { $ErrorParams.Add('Category', $ErrorRecord.CategoryInfo.Category)}
-        #     ({$PSItem.CategoryInfo.Activity}) { $ErrorParams.Add('CategoryActivity', $ErrorRecord.CategoryInfo.Activity)}
-        #     ({$PSItem.CategoryInfo.Reason}) { $ErrorParams.Add('CategoryReason', $ErrorRecord.CategoryInfo.Reason)}
-        #     ({$PSItem.CategoryInfo.TargetName}) { $ErrorParams.Add('CategoryTargetName', $ErrorRecord.CategoryInfo.TargetName)}
-        #     ({$PSItem.CategoryInfo.TargetType}) { $ErrorParams.Add('CategoryTargetType', $ErrorRecord.CategoryInfo.TargetType)}
-        #     ({$PSItem.FullyQualifiedErrorId}) { $ErrorParams.Add('ErrorId', $ErrorRecord.FullyQualifiedErrorId)}
-        #     ({$PSItem.TargetObject}) { $ErrorParams.Add('TargetObject', $ErrorRecord.TargetObject)}
-        #     ({$PSItem.Exception}) { $ErrorParams.Add('Exception', $ErrorRecord.Exception)}
-        #     Default {}
-        # }
-
-        # if (!$ErrorParams.Message) {
-        #     $ErrorParams.Add('Message', $Error[0].Exception.Message)
-        # }
-
-        # if (!$ErrorParams.Message) {
-        #     $ErrorParams.Add('Message', $global:Error[0].Exception.Message)
-        # }
-
-        # Write-Error @ErrorParams
         Write-Error -ErrorRecord $Error[0]
     }
 }
