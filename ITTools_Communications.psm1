@@ -611,6 +611,7 @@ function Connect-CMServer {
         $Global:Error.RemoveAt(0)
         New-PSDrive -Name $SiteCode -PSProvider "CMSite" -Root $SiteServer -Description "MS MECM" -Scope Global
     }
+    Set-Location -Path "$($SiteCode):\"
 }
 
 
