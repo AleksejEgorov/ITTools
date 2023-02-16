@@ -954,7 +954,6 @@ function Get-ADUserByMail {
         Search users by mails from txt file. Returned objects will contain Company, Title and Info attributes
     #>
     
-    
     [CmdletBinding()]
     param (
         # Email address
