@@ -928,6 +928,33 @@ function Set-ADGroupThumbnailPhoto {
 
 
 function Get-ADUserByMail {
+    <#
+    .SYNOPSIS
+        Search users in AD by email address
+    .DESCRIPTION
+        Search users in AD by email address in your and all trusted domains. Search by proxy addresses, not only primary.
+    .INPUTS
+        Email addresses as string[]
+    .OUTPUTS
+        Active Directory user objects as Microsoft.ActiveDirectory.Management.ADUser[]
+    .EXAMPLE
+        Get-ADUserByMail email@maildomain.tld
+        Search AD user with mail email@maildomain.tld
+    .EXAMPLE
+        Get-ADUserByMail emailone@maildomain.tld, emailtwo@otherdomain.tld
+        Search multiple AD users with mails.
+    .EXAMPLE
+        Get-ADUserByMail emailone@maildomain.tld, emailtwo@otherdomain.tld
+        Search multiple AD users with mails.
+    .EXAMPLE
+        'emailone@maildomain.tld; emailtwo@otherdomain.tld'.Split('; ') | ? {PSItem} | Get-ADUserByMail -Server firstdomain.tld, seconddomain.tld
+        Parse line of mails and search users in domains firstdomain.tld and seconddomain.tld using pipeline. Empty lines will be iglored.
+    .EXAMPLE
+        Get-Content .\mail_list.txt | Get-ADUserByMail -Properties Company,Title,Info
+        Search users by mails from txt file. Returned objects will contain Company, Title and Info attributes
+    #>
+    
+    
     [CmdletBinding()]
     param (
         # Email address
@@ -961,17 +988,20 @@ function Get-ADUserByMail {
     )
     
     begin {
+        # Define search domains
         if (!$Server) {
             $Server = @()
             $Server += (Get-CimInstance -ClassName Win32_ComputerSystem).Domain
             Get-ADTrust -Filter "*" | ForEach-Object {$Server += $PSItem.Target}
         }
 
+        # Add mandatory properties
         @('mail','proxyAddresses') | ForEach-Object {
             if ($Properies -notcontains $PSItem) {$Properies += $PSItem}
         }
 
 
+        # Collect users from each domain
         $AllUsers = @()
         $Server | ForEach-Object {
             Write-Verbose "Collect users in domain $PSItem"
@@ -991,7 +1021,5 @@ function Get-ADUserByMail {
         }
     }
     
-    end {
-        
-    }
+    end {}
 }
