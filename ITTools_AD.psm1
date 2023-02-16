@@ -926,3 +926,72 @@ function Set-ADGroupThumbnailPhoto {
     }
 }
 
+
+function Get-ADUserByMail {
+    [CmdletBinding()]
+    param (
+        # Email address
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('EmailAddress','WindowsEmailAddress')]
+        [string[]]$Mail,
+
+        # From domains
+        [Parameter(
+            Mandatory = $false,
+            Position = 1
+        )]
+        [string[]]$Server,
+
+        # AD filter
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$Filter = "(mail -like '*') -and (Enabled -eq 'true')",
+
+        # AD Propertiers 
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string[]]$Properies = @('mail','proxyAddresses')
+    )
+    
+    begin {
+        if (!$Server) {
+            $Server = @()
+            $Server += (Get-CimInstance -ClassName Win32_ComputerSystem).Domain
+            Get-ADTrust -Filter "*" | ForEach-Object {$Server += $PSItem.Target}
+        }
+
+        @('mail','proxyAddresses') | ForEach-Object {
+            if ($Properies -notcontains $PSItem) {$Properies += $PSItem}
+        }
+
+
+        $AllUsers = @()
+        $Server | ForEach-Object {
+            Write-Verbose "Collect users in domain $PSItem"
+            $AllUsers += Get-ADUser -Server $PSItem -Filter "$Filter" -Properties $Properies
+        }
+    }
+    
+    process {
+        foreach ($Address in $Mail) {
+            Write-Verbose "Search $Address"
+            Write-Debug $Address
+            $ADUsers = @($AllUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
+            if ($ADUsers.Count -gt 1) {
+                Write-Warning "Multiple objects found with mail $Address"
+            }
+            $ADUsers | ForEach-Object {$PSItem}
+        }
+    }
+    
+    end {
+        
+    }
+}
