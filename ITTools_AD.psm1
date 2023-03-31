@@ -760,12 +760,12 @@ function Get-ADGroupUsers {
             Position = 1
         )]
         [string[]]$Properties = @(
-            'EmailAddress',
+            'Mail',
             'Description',
             'Company',
             'Department',
             'Title',
-            'info'
+            'Info'
         ),
 
         [Parameter(
