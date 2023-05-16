@@ -984,7 +984,9 @@ function Get-ADUserByMail {
         [Parameter(
             Mandatory = $false
         )]
-        [string[]]$Properies = @('mail','proxyAddresses')
+        [string[]]$Properies = @('mail','proxyAddresses'),
+
+        [switch]$Renew
     )
     
     begin {
@@ -1002,10 +1004,12 @@ function Get-ADUserByMail {
 
 
         # Collect users from each domain
-        $AllUsers = @()
-        $Server | ForEach-Object {
-            Write-Verbose "Collect users in domain $PSItem"
-            $AllUsers += Get-ADUser -Server $PSItem -Filter "$Filter" -Properties $Properies
+        if ($Renew -or !$global:AllMailUsers) {
+            $global:AllMailUsers = @()
+            $Server | ForEach-Object {
+                Write-Verbose "Collect users in domain $PSItem"
+                $global:AllMailUsers += Get-ADUser -Server $PSItem -Filter "$Filter" -Properties $Properies
+            }
         }
     }
     
@@ -1013,7 +1017,7 @@ function Get-ADUserByMail {
         foreach ($Address in $Mail) {
             Write-Verbose "Search $Address"
             Write-Debug $Address
-            $ADUsers = @($AllUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
+            $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
             if ($ADUsers.Count -gt 1) {
                 Write-Warning "Multiple objects found with mail $Address"
             }
