@@ -1006,16 +1006,17 @@ function Get-ADUserByMail {
         # Collect users from each domain
         if ($Renew -or !$global:AllMailUsers) {
             $global:AllMailUsers = @()
-            $Server | ForEach-Object {
-                Write-Verbose "Collect users in domain $PSItem"
-                $global:AllMailUsers += Get-ADUser -Server $PSItem -Filter "$Filter" -Properties $Properies
+            for ($i = 0; $i -lt $Server.Count; $i++) {
+                Write-Progress -Activity "Collect mail users:" -Status $Server[$i] -PercentComplete (($i + 1) /$Server.Count * 100)
+                $global:AllMailUsers += Get-ADUser -Server $Server[$i] -Filter "$Filter" -Properties $Properies
+                Write-Progress -Activity "Collect mail users:" -Status "$($global:AllMailUsers) found." -Completed
             }
         }
     }
     
     process {
         foreach ($Address in $Mail) {
-            Write-Verbose "Search $Address"
+            Write-Progress -Activity "Searching" -Status $Address
             Write-Debug $Address
             $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
             if ($ADUsers.Count -gt 1) {
