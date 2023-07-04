@@ -559,7 +559,7 @@ function Get-ADPasswordExperationDate {
                 $ADUser = Get-ADUser -Identity $User -Properties $RequestedProperties -Server $Server -ErrorAction Stop
             }
             catch {
-                # $Error[0]
+                # $global:Error[0]
                 Write-Error -ErrorRecord $global:Error[0]
                 continue
             }
@@ -815,7 +815,7 @@ function Get-ADGroupUsers {
                         $RemoteDomain = Get-ADDomain $ReadableName.Split('\')[0]
                     }
                     catch {
-                        Write-Warning "Cannot contact remote domain $($ReadableName.Split('\')[0]) to find user $RemoteName. $($Error[0].Exception.Message) "
+                        Write-Warning "Cannot contact remote domain $($ReadableName.Split('\')[0]) to find user $RemoteName. $($global:Error[0].Exception.Message) "
                         continue
                     }
                     $RemoteDomain = Get-ADDomain $ReadableName.Split('\')[0]
@@ -1027,4 +1027,289 @@ function Get-ADUserByMail {
     }
     
     end {}
+}
+
+function New-DistributionGroupMigration {
+    [CmdletBinding()]
+    param (
+        # Groups email addresses.
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0
+        )]
+        [Alias('WindowsEmailAddres','PrimarySmtpAddress')]
+        [string[]]$Mail,
+
+        # Remote domain
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [string]$FromDomain,
+
+        # Local domain
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [string]$ToDomain = $Env:USERDNSDOMAIN.ToLower(),
+
+        # OU for new groups
+        [Parameter(
+            Mandatory = $false,
+            Position = 3
+        )]
+        [string]$CreateInOU,
+
+        # Remote Exchange credentials
+        [Parameter(
+            Mandatory = $false
+        )]
+        [pscredential]$FromCreds,
+        
+        # Local Exchange credentials
+        [Parameter(
+            Mandatory = $false
+        )]
+        [pscredential]$ToCreds,
+
+        # New group displayName
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$NewName,
+
+        # New group primarySmtpAddress
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$NewMail,
+
+
+        [switch]$MigrateMembers
+
+    )
+    
+    begin { 
+        #region Create Sessions
+            $FromExchange = @(((Get-ADGroupMember "Exchange Servers" -Server $FromDomain | Where-Object {$PSItem.objectClass -eq 'computer'}) | Get-ADComputer ).DnsHostName)[0]
+            $ToExchange = @(((Get-ADGroupMember "Exchange Servers" -Server $ToDomain | Where-Object {$PSItem.objectClass -eq 'computer'}) | Get-ADComputer).DnsHostName)[0]
+
+            if (!$FromCreds) {
+                $FromCreds = Get-Credential -Message "Type Exchange Recipient Manager credential for remote domain $FromDomain" -UserName "$env:USERNAME@$FromDomain"
+            }
+
+            if (!$ToCreds) {
+                $ToCreds =  Get-Credential -Message "Type Exchange Recipient Manager credential for local domain $ToDomain" -UserName "$env:USERNAME@$ToDomain"
+            }
+
+            $FromSession = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$FromExchange/PowerShell/" -Authentication Kerberos -Credential $FromCreds
+            $ToSession = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$ToExchange/PowerShell/" -Authentication Kerberos -Credential $ToCreds
+
+        #endregion
+
+        #region Begin checks
+            try {
+                $null = Invoke-Command -Session $FromSession -ScriptBlock {Get-ExchangeServer $using:FromExchange} -ErrorAction Stop
+            }
+            catch {
+                throw
+            }
+
+            try {
+                $null = Invoke-Command -Session $ToSession -ScriptBlock {Get-ExchangeServer $using:ToExchange} -ErrorAction Stop
+            }
+            catch {
+                throw
+            }
+
+            if ($CreateInOU) {
+                try {
+                    $TargetOU = (Get-ADOrganizationalUnit $CreateInOU -ErrorAction Stop).DistinguishedName
+                }
+                catch {
+                    $TargetOU = (Get-ADDomain $ToDomain).UsersContainer
+                    Write-Warning "Groups will be created in $TargetOU. $($global:Error[0].Exception.Message)"
+                }
+            }
+            else {
+                $TargetOU = (Get-ADDomain $ToDomain).UsersContainer
+                Write-Warning "Groups will be created in $TargetOU."
+            }
+        #endregion
+
+    }
+    
+    process {
+        foreach ($GroupMail in $Mail) {
+            try {
+                $SourceGroupObject = Invoke-Command -Session $FromSession -ErrorAction Stop -ScriptBlock {
+                    Get-DistributionGroup $using:GroupMail
+                }
+                Write-Verbose "...source group found: $($SourceGroupObject.DistinguishedName)"
+            }
+            catch {
+                Write-Warning $($global:Error[0].Exception.Message)
+                continue
+            }
+
+            try {
+                $TargetContactObject = Invoke-Command -Session $ToSession -ErrorAction Stop -ScriptBlock {
+                    Get-MailContact $using:GroupMail
+                }
+                Write-Verbose "...target contact found: $($TargetContactObject.DistinguishedName)"
+            }
+            catch {
+                Write-Warning $($global:Error[0].Exception.Message)
+            }
+
+
+            if ($NewName) {
+                $AliasName = Get-Translit $NewName.Replace(' ','')
+
+                $TargetDisplayName = $NewName
+                $TargetName = $NewName
+                $TargetAlias = $AliasName
+            }
+            else {
+                $TargetDisplayName = $SourceGroupObject.DisplayName
+                $TargetName = $SourceGroupObject.Name
+                $TargetAlias = $SourceGroupObject.Alias
+            }
+
+            $TargetAddresses = @()
+            $TargetAddresses += "X500:$($SourceGroupObject.LegacyExchangeDN)"
+
+            if ($TargetContactObject) {
+                $TargetAddresses += "x500:$($TargetContactObject.LegacyExchangeDN)"
+            }
+
+            if ($NewMail) {
+                $TargetPrimarySmtpAddress = $NewMail
+                $TargetAddresses += "SMTP:$NewMail"
+                $SourceGroupObject.EmailAddresses | ForEach-Object {
+                    $TargetAddresses += $PSItem.Replace('SMTP:','smtp:').Replace('X500:','x500:')
+                }
+            }
+            else {
+                $TargetPrimarySmtpAddress = $SourceGroupObject.PrimarySmtpAddress
+                $SourceGroupObject.EmailAddresses | ForEach-Object {
+                    $TargetAddresses += $PSItem.Replace('X500:','x500:')
+                }
+            }
+            Write-Verbose "...addreses defined: $($TargetAddresses -join '; ')"
+
+            if ($TargetContactObject) {
+                try {
+                    Invoke-Command -Session $ToSession -ErrorAction Stop -ScriptBlock {
+                        Get-MailContact $using:GroupMail | Remove-MailContact -Confirm:$false
+                    }
+                    Write-Verbose "...target contact removed."
+                }
+                catch {
+                    Write-Warning "Cannot remove mail contact in $ToDomain. $($global:Error[0].Exception.Message)"
+                }
+            }
+
+            try {
+                $TargetGroupObject = Invoke-Command -Session $ToSession -ErrorAction Stop -ScriptBlock {
+                    New-DistributionGroup -OrganizationalUnit $using:TargetOU `
+                        -MemberJoinRestriction $using:SourceGroupObject.MemberJoinRestriction `
+                        -MemberDepartRestriction $using:SourceGroupObject.MemberDepartRestriction `
+                        -Alias $using:TargetAlias `
+                        -DisplayName $using:TargetDisplayName `
+                        -Name $using:TargetName `
+                        -PrimarySmtpAddress $using:TargetPrimarySmtpAddress
+                }
+                Write-Verbose "...target group created: $($TargetGroupObject.DistinguishedName)"
+            }
+            catch {
+                Write-Warning "Cannot create distribution group in $ToDomain. $($global:Error[0].Exception.Message)"
+                continue
+            }
+
+
+            try {
+                Invoke-Command -Session $ToSession -ErrorAction Stop -ScriptBlock {
+                    Get-DistributionGroup $using:TargetGroupObject.DistinguishedName | `
+                        Set-DistributionGroup -EmailAddresses $using:TargetAddresses `
+                            -RequireSenderAuthenticationEnabled $using:SourceGroupObject.RequireSenderAuthenticationEnabled
+                }
+                Write-Verbose "...target group addresses applied"
+            }
+            catch {
+                Write-Warning "Cannot add addresses to distribution group $TargetPrimarySmtpAddress in $ToDomain. $($global:Error[0].Exception.Message)"
+            }
+
+            if ($MigrateMembers) {
+                try {
+                    $SourceMembers = @(Invoke-Command -Session $FromSession -ErrorAction Stop -ScriptBlock {
+                        Get-DistributionGroupMember $using:GroupMail
+                    })
+                    Write-Verbose "...source group members found: $($SourceMembers.Count)"
+                }
+                catch {
+                    Write-Warning "Cannot get members of distribution group in $FromDomain. $($global:Error[0].Exception.Message)"
+                }
+
+                $SourceMembers.PrimarySmtpAddress | Where-Object {$PSItem} | ForEach-Object {
+                    try {
+                        Invoke-Command -Session $ToSession -ErrorAction Stop -ScriptBlock {
+                            Get-Recipient $using:PSItem | Add-DistributionGroupMember -identity $using:TargetPrimarySmtpAddress
+                        }
+                        Write-Verbose "...recipient added: $($PSItem)"
+                    }
+                    catch {
+                        Write-Warning "$($global:Error[0].Exception.Message)"
+                    }
+                }
+            }
+
+            
+            try {
+                Invoke-Command -Session $FromSession -ErrorAction Stop -ScriptBlock {
+                    Remove-DistributionGroup $using:GroupMail -Confirm:$false
+                }
+                Write-Verbose "...source group removed."
+            }
+            catch {
+                Write-Warning "Cannot remove distribution group in $FromDomain. $($global:Error[0].Exception.Message)"
+            }
+
+            $SourceOU = $SourceGroupObject.DistinguishedName.Replace("CN=$($SourceGroupObject.Name),",'')
+            Write-Verbose "...source OU defined: $SourceOU"
+            try {
+                $null = Invoke-Command -Session $FromSession -ErrorAction Stop -ScriptBlock {
+                    New-MailContact -Name $using:TargetName `
+                        -Alias $using:TargetAlias `
+                        -DisplayName $using:TargetDisplayName `
+                        -PrimarySmtpAddress $using:TargetPrimarySmtpAddress `
+                        -ExternalEmailAddress $using:TargetPrimarySmtpAddress `
+                        -OrganizationalUnit $using:SourceOU
+                }
+                Write-Verbose "...source contact created."
+            }
+            catch {
+                Write-Warning "Cannot create mail contact in $FromDomain. $($global:Error[0].Exception.Message)"
+            }
+
+
+            try {
+                Invoke-Command -Session $FromSession -ErrorAction Stop -ScriptBlock {
+                    Set-MailContact $using:TargetPrimarySmtpAddress -EmailAddresses $using:TargetAddresses
+                }
+                Write-Verbose "...source contact addressed applied."
+            }
+            catch {
+                Write-Warning "Cannot add addresses to mail contact $TargetPrimarySmtpAddress in $FromDomain. $($global:Error[0].Exception.Message)"
+            }
+        }        
+    }
+    
+    end {
+        Remove-PSSession $FromSession
+        Remove-PSSession $ToSession  
+    }
 }
