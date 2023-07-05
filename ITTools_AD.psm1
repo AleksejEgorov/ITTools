@@ -1030,6 +1030,19 @@ function Get-ADUserByMail {
 }
 
 function New-DistributionGroupMigration {
+        <#
+    .SYNOPSIS
+        Migrates distribution lists betweeen Exchange organizations
+    .DESCRIPTION
+        Creates distribution lists in target organization and mail contacts in source organization, both with x500 addresses. Membership migration is supported, if members exist in target organization.
+    .INPUTS
+        Groups email addresses as string[]
+    .OUTPUTS
+        None
+    .EXAMPLE
+        New-DistributionGroupMigration -Mail Group0@source.tld -FromDomain sourceforest.tld -MigrateMembers -NewName "Migrated Group 0" -NewMail "Group0@target.tld"
+        Migrates Group0@source.tld from sourceforest.tld to current administrator's org with new name and mail and old members.
+    #>
     [CmdletBinding()]
     param (
         # Groups email addresses.
