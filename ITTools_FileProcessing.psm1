@@ -468,19 +468,16 @@ function Remove-EmptyFolders {
         None. Remove-EmptyFolders don't return anything
     .EXAMPLE
         PS> Remove-EmptyFolders -Path C:\Test
-        Recursively remove empty folders in C:\Test
+        Recursively remove empty folders in C:\Test include C:\Test.
     .EXAMPLE
-        PS> New-TestFile C:\Test 0.5 KB
-        Create file test05KB.dat size of 512 bytes (0.5KB) in C:\Test
+        PS> Remove-EmptyFolders -Path C:\Test -SaveRoot
+        Recursively remove empty folders in C:\Test exclude C:\Test.
     .EXAMPLE
-        New-TestFile . 5
-        Create file test5MB.dat size of 5MB in current directory
+        PS> Remove-EmptyFolders -Path C:\Test -LogFilePath C:\Logs\RemovingEmpty.log
+        Recursively remove empty folders in C:\Test with logging to C:\Logs\RemovingEmpty.log.
     .EXAMPLE
-        PS> New-TestFile . @(5,10,20)
-        Create files test5MB.dat (size of 5MB), test10MB.dat (size of 10MB) and test20MB.dat (size of 20MB) in current directory
-    .EXAMPLE
-        PS> 1..3 | New-TestFile -DirectoryPath C:\TestFiles -Units GB
-        Create files test1GB.dat (size of 1GB), test2GB.dat (size of 2GB) and test3GB.dat (size of 3GB) in directory C:\TestFiles
+        PS> Get-ChildItem C:\Test | Remove-EmptyFolders -SaveRoot
+        Recursively remove empty folders in subdirectories of C:\Test, but not subdirectories themselves.
     #>
     param (
         # Path to search
@@ -528,5 +525,155 @@ function Remove-EmptyFolders {
 
     end {
         return
+    }
+}
+
+
+function ConvertFrom-Ini {
+    <#
+    .SYNOPSIS
+        Convert ini-file text to powershell object.
+    .DESCRIPTION
+        Convert ini-file text to powershell object. You can pass content as string or string array. 
+        Pipelines supported. With -Verbose you can see line numbers. Comments and empty lines will be ignored. 
+    .INPUTS
+        Content as System.String[]
+    .OUTPUTS
+        Ini object as Dictionary[[string],[Dictionary[[string],[string]]]]
+    .EXAMPLE
+        PS> ConvertFrom-Ini -Content (Get-Content C:\Settings.ini)
+        Convert content of C:\Settings.ini to powershell object
+    .EXAMPLE
+        PS> ConvertFrom-Ini (Get-Content C:\Settings.ini -Raw)
+        Convert raw content of C:\Settings.ini to powershell object using positional parameter.
+    .EXAMPLE
+        Get-Content C:\Settings.ini | ConvertFrom-Ini 
+        Convert content of C:\Settings.ini to powershell object using pipeline.
+    #>
+    [CmdletBinding()]
+    param (
+        # Input string
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true            
+        )]
+        [AllowEmptyString()]
+        [string[]]$Content
+    )
+    
+    begin {
+        $MultilineContent = @()
+        $Ini = [Dictionary[[string],[Dictionary[[string],[string]]]]]::new()
+    }
+    
+    process {
+        # Reformat content to multiline mode.
+        foreach($Row in $Content) {
+            if ($Row -match "`n") {
+                $Row.Split("`n") | Where-Object {$PSItem} | ForEach-Object {$MultilineContent += $PSItem}
+            }
+            elseif ($Row) {
+                $MultilineContent += $Row
+            }
+            else {
+                continue
+            }
+        }
+    }
+    
+    end {
+        $i = 0
+
+        foreach ($Line in $MultilineContent) {
+            # Maybe line numbers will be usefull for comments
+            Write-Verbose "$($i.ToString().PadLeft(($MultilineContent.Count.ToString().Length),'0')) | $Line"
+            $i++
+
+            switch -regex ($Line) {
+                # Section
+                "^\[(.+)\]" {
+                    $SectionName = $Matches[1]
+                    $Ini.Add($SectionName,([Dictionary[[string],[string]]]::new()))
+                }
+                # Key-Value
+                "(.+?)\s*=(.*)" {
+                    $KeyName,$Value = $matches[1..2]
+                    $Ini.$SectionName.Add($KeyName,$Value)
+                }
+            }
+        }
+
+        return $Ini
+    }
+}
+
+function ConvertTo-Ini {
+    <#
+    .SYNOPSIS
+        Convert ini object to string array.
+    .DESCRIPTION
+       Convert ini object (i.e created with ConvertFrom-Ini) to ini content string array. 
+       You can pass object as [Dictionary[[string],[Dictionary[[string],[string]]]]] or [hashtable] (not recommended).
+       Pipelines supported.
+    .INPUTS
+        InputObject as [Dictionary[[string],[Dictionary[[string],[string]]]]] or System.Collections.Hashtable
+    .OUTPUTS
+        Content as String[]
+    .EXAMPLE
+        PS> ConvertTo-Ini -InputObject $IniObject
+        Convert ini dictionary object to string array.
+    .EXAMPLE
+        PS> ConvertTo-Ini $HashTable
+        Convert hashtable object to string array using positional parameter. Warning will be displayed.
+    .EXAMPLE
+        PS> $IniObject | ConvertTo-Ini | Out-File C:\Settings.ini -Encoding ASCII
+         Convert ini dictionary object to string array and write it to ini-file C:\Settings.ini using pipelines.
+    #>
+    [CmdletBinding()]
+    param (
+        # Input object as [Dictionary[[string],[Dictionary[[string],[string]]]]]
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true
+        )]
+        [ValidateScript(
+            {
+                switch ($PSItem.GetType()) {
+                    ([Dictionary[[string],[Dictionary[[string],[string]]]]]) {
+                        return $true
+                    }
+                    ([hashtable]) {
+                        Write-Warning "Recommended input object type is [Dictionary[[string],[Dictionary[[string],[string]]]]] instead [Hashtable], but we will try."
+                        return $true
+                    }
+                    Default {
+                        throw "Input object must have type [Dictionary[[string],[Dictionary[[string],[string]]]]]"
+                    }
+                }
+            }
+        )]
+        [psobject]$InputObject
+    )
+    
+    begin {
+        $Content = @()        
+    }
+    
+    process {
+        foreach ($Ini in $InputObject) {
+            foreach ($SectionName in $Ini.Keys) {
+                $Content += "[$SectionName]"
+                foreach ($KeyName in $Ini.$SectionName.Keys) {
+                    $Content += "$($KeyName)=$($Ini.$SectionName.$KeyName)"
+                }
+            }
+
+        }        
+    }
+    
+    end {
+        return $Content
     }
 }
