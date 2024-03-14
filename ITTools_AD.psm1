@@ -952,6 +952,9 @@ function Get-ADUserByMail {
     .EXAMPLE
         Get-Content .\mail_list.txt | Get-ADUserByMail -Properties Company,Title,Info
         Search users by mails from txt file. Returned objects will contain Company, Title and Info attributes
+    .EXAMPLE
+        Get-ADUserByMail *@maildomain.tld -Wildcard
+        Search all AD users with mail domain @maildomain.tld
     #>
     
     
@@ -986,6 +989,8 @@ function Get-ADUserByMail {
         )]
         [string[]]$Properies = @('mail','proxyAddresses'),
 
+        [switch]$Wildcard,
+
         [switch]$Renew
     )
     
@@ -1018,9 +1023,15 @@ function Get-ADUserByMail {
         foreach ($Address in $Mail) {
             Write-Progress -Activity "Searching" -Status $Address
             Write-Debug $Address
-            $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
-            if ($ADUsers.Count -gt 1) {
-                Write-Warning "Multiple objects found with mail $Address"
+            if ($Wildcard) {
+                $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -like "smtp:$Address"})
+                
+            }
+            else {
+                $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
+                if ($ADUsers.Count -gt 1) {
+                    Write-Warning "Multiple objects found with mail $Address"
+                }
             }
             $ADUsers | ForEach-Object {$PSItem}
         }
