@@ -361,7 +361,7 @@ function Import-JsonSettings {
         if ((Test-Path $DefaultJsonPath)) {
             try {
                 # https://stackoverflow.com/questions/51066978/convert-to-json-with-comments-from-powershell
-                $global:DefaultSettings = (Get-Content -Path $DefaultJsonPath -Raw -ErrorAction Stop)`
+                $global:DefaultSettings = (Get-Content -Path $DefaultJsonPath -Encoding UTF8 -Raw -ErrorAction Stop)`
                     -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' `
                     -replace '(?ms)/\*.*?\*/' | ConvertFrom-JSON -ErrorAction Stop
             }
@@ -377,7 +377,7 @@ function Import-JsonSettings {
 
         try {
             # https://stackoverflow.com/questions/51066978/convert-to-json-with-comments-from-powershell
-            $global:OwnSettings = (Get-Content -Path $JsonPath -Raw -ErrorAction Stop) `
+            $global:OwnSettings = (Get-Content -Path $JsonPath -Encoding UTF8 -Raw -ErrorAction Stop) `
                 -replace '(?m)(?<=^([^"]|"[^"]*")*)//.*' `
                 -replace '(?ms)/\*.*?\*/' | ConvertFrom-JSON -ErrorAction Stop
         }
