@@ -109,7 +109,7 @@ function Write-CMLog {
         catch {
             $AttemptsLeft--
             $global:Error.RemoveAt(0)
-            Start-Sleep -Milliseconds (Get-Random (200..500))
+            Start-Sleep -Milliseconds (Get-Random (300..1000))
         }
     }
     if (!$LogSuccess) {
