@@ -889,3 +889,47 @@ function Send-WOL {
     $UDPClient.Connect($Broadcast,$Port)
     [void]$UDPClient.Send($Packet, 102)
 }
+
+
+function Update-CMDeployments {
+    [CmdletBinding()]
+    param (
+        # Computer name
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('DnsHostName')]
+        [string[]]$ComputerName
+    )
+    
+    begin {
+        
+    }
+    
+    process {
+        foreach ($Name in $ComputerName) {
+            Write-Verbose $Name
+            Invoke-Command -ComputerName $Name -ScriptBlock {
+                $CCMComObject = New-Object -ComObject 'UIResource.UIResourceMgr'
+                $CacheInfo = $CCMComObject.GetCacheInfo().GetCacheElements()
+                foreach ($CacheItem in $CacheInfo) {
+                    $CCMComObject.GetCacheInfo().DeleteCacheElement([string]$($CacheItem.CacheElementID))
+                }
+
+                @(
+                    '{00000000-0000-0000-0000-000000000022}',
+                    '{00000000-0000-0000-0000-000000000121}',
+                    '{00000000-0000-0000-0000-000000000021}'
+                ) | ForEach-Object {Invoke-WMIMethod -Namespace "Root\CCM" -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $PSItem}
+                
+                }
+            }
+        }
+    
+    end {
+        
+    }
+}
