@@ -933,3 +933,46 @@ function Update-CMDeployments {
         
     }
 }
+
+function Install-CMApplication {
+    [CmdletBinding()]
+    param (
+        # Computer name
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('DnsHostName')]
+        [string[]]$ComputerName,
+
+        # App full name. Wildcards supported
+        [Parameter(
+            Position = 0,
+            Mandatory = $true
+        )]
+        [string]$Name
+    )
+    
+    begin {}
+    
+    process {
+        foreach ($Computer in $ComputerName) {
+            Write-Verbose $Computer
+            Invoke-Command -ComputerName $Computer -ScriptBlock {
+                Get-CimInstance -Query "SELECT * FROM CCM_Application" -Namespace "ROOT\ccm\ClientSDK" | Where-Object {
+                    ($PSItem.FullName -like "$using:Name") -and `
+                    ($PSItem.ApplicabilityState -eq 'Applicable') -and `
+                    ($PSItem.InstallState -eq 'NotInstalled')
+                } | ForEach-Object {
+                    # https://learn.microsoft.com/en-us/mem/configmgr/develop/reference/core/clients/sdk/install-method-in-class-ccm_application?redirectedfrom=MSDN
+                    ([wmiclass]'Root\CCM\ClientSDK:CCM_Application').Install($PSItem.ID, $PSItem.Revision, $PSItem.IsMachineTarget, 0, "Normal", $false)
+                }  
+            }
+        }
+        
+    }
+    
+    end {}
+}
