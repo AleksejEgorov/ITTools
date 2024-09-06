@@ -1716,7 +1716,9 @@ function Invoke-Process {
             Mandatory = $false,
             Position = 1
         )]
-        [string[]]$ArgumentList
+        [string[]]$ArgumentList,
+
+        [switch]$NoWait
     )
 
     $ProcessInfo = [System.Diagnostics.ProcessStartInfo]::new()
@@ -1729,7 +1731,10 @@ function Invoke-Process {
     $Process = [System.Diagnostics.Process]::new()
     $Process.StartInfo = $ProcessInfo
     $null = $Process.Start()
-    $Process.WaitForExit()
+
+    if (!$NoWait) {
+        $Process.WaitForExit()
+    }
 
     return [ProcessInvocationResult]::new($Process)
 
