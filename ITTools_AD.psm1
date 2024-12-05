@@ -910,9 +910,7 @@ function Set-ADGroupThumbnailPhoto {
             Mandatory = $true,
             Position = 1
         )]
-        [string]$Path,
-
-        [switch]$Jpeg
+        [string]$Path
     )
 
     $PhotoItem = Get-Item $Path -ErrorAction Stop
@@ -920,10 +918,6 @@ function Set-ADGroupThumbnailPhoto {
 
     $ThumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 96 -Quality 96))
     Set-ADGroup -Identity $ADGroup -Replace @{thumbnailPhoto = $ThumbnailPhoto}
-    if ($Jpeg) {
-        $JpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 256 -Quality 96))
-        Set-ADGroup -Identity $ADGroup -Replace @{jpegPhoto = $JpegPhoto}
-    }
 }
 
 
