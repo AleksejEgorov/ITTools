@@ -101,15 +101,17 @@ function Write-CMLog {
         $Encoding = 'utf8'
     }
 
-    while (!($LogSuccess -or $AttemptsLeft -eq 0)) {
+    while (!$LogSuccess -and ($AttemptsLeft -gt 0)) {
         try {
             Add-Content -Path $LogFilePath -Value $Content -Encoding $Encoding -ErrorAction Stop
             $LogSuccess = $true
         }
         catch {
             $AttemptsLeft--
-            $global:Error.RemoveAt(0)
-            Start-Sleep -Milliseconds (Get-Random (300..1000))
+            if ($AttemptsLeft -gt 0) {
+                $global:Error.RemoveAt(0)
+                Start-Sleep -Milliseconds (Get-Random (300..1000))
+            }
         }
     }
     if (!$LogSuccess) {
