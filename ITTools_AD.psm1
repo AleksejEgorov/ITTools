@@ -224,62 +224,54 @@ function Get-ADUserByName {
     end {}
 }
 
-
-function Get-ADGroupGroups {
-    [CmdletBinding()]
+##############################################################
+####             Define group's parent groups             ####
+##############################################################
+function Get-ADParentGroupsDN {
     param (
+        # Group distinguishedName
         [Parameter(
             Mandatory = $true,
             Position = 0,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true
         )]
-        [Alias("DistinguishedName")]
-        [string]$GroupName,
+        [Alias('DistinguishedName')]
+        [string]$GroupDN,
 
-        [Alias('Recurse')]
-        [switch]$Nested,
+        [Alias('Nested')]
+        [switch]$Recurce,
 
         [switch]$AsObject,
 
-        [string]$Server = (& {Get-ADDomainController}).HostName
+        # Search in DC or GC
+        [Parameter(
+            Mandatory = $false
+        )]
+        [ValidateSet('LDAP', 'GC')]
+        [string]$SearchIn = 'LDAP'
     )
 
     begin {
         $Result = @()
     }
+
     process {
-
-        try {
-            $Group = Get-ADGroup $GroupName -Properties MemberOf -Server $Server -ErrorAction Stop
-        }
-        catch {
-            Write-Warning "Group $GroupName is not found in $env:USERDOMAIN."
-            continue
-        }
-
-        # $Groups = New-Object 'List[ADGroup]'
-        foreach ($GroupDN in $Group.MemberOf) {
-            $ParentGroup = Get-ADGroup -Identity $GroupDN -Server $Server
-            Write-Progress -Activity 'Inspecting groups:' -CurrentOperation $ParentGroup.Name
-
+        $Group = [adsi]"$($SearchIn)://$GroupDN"
+        $ParentGroups = $Group.memberOf
+        foreach ($ParentGroup in $ParentGroups) {
             $Result += $ParentGroup
-            if ($Nested) {
-                foreach ($NestedGroup in (Get-ADGroupGroups $GroupDN -Nested -AsObject)) {
-                    if ($Result.DistinguishedName -notcontains $NestedGroup.DistinguishedName) {
-                        $Result += $NestedGroup
-                    }
-                }
+            if ($Recurce) {
+                Write-Progress -Activity 'Inspecting groups:' -CurrentOperation $ParentGroup
+                $Result += Get-ADParentGroupsDN $ParentGroup -Recurce
             }
         }
-    }
-    end {
-        if ($AsObject) {
-            return ($Result | Sort-Object SamAccountName)
-        }
-        return $Result.SamAccountName | Sort-Object
+        Write-Progress -Completed -Activity "Group inspecting done"
     }
 
+    end {
+        $Result | Select-Object -Unique
+    }
 }
 
 ##############################################################
@@ -297,8 +289,8 @@ function Get-ADUserGroups {
         [Alias("SamAccountName",'DistinguishedName')]
         [string]$UserName,
 
-        [Alias('Recurse')]
-        [switch]$Nested,
+        [Alias('Nested')]
+        [switch]$Recurse,
 
         [switch]$AsObject,
 
@@ -316,29 +308,29 @@ function Get-ADUserGroups {
         }
         catch {
             Write-Warning "User $UserName not found in $env:USERDOMAIN."
-            continue
+            return
         }
 
-        foreach ($Group in $ADUser.MemberOf) {
-            $UserGroup = Get-ADGroup -Identity $Group -Server $Server
+        $UserGroups = $ADUser.memberOf
+        foreach ($UserGroup in $UserGroups) {
             $Result += $UserGroup
-            if ($Nested) {
-                foreach ($NestedGroup in (Get-ADGroupGroups $UserGroup -Nested -AsObject)) {
-                    if ($Result.DistinguishedName -notcontains $NestedGroup.DistinguishedName) {
-                        $Result += $NestedGroup
-                    }
-                }
+            if ($Recurse) {
+                $Result += Get-ADParentGroupsDN $UserGroup -Recurce
             }
         }
     }
 
     end {
-        if ($AsObject) {
-            return ($Result | Sort-Object SamAccountName)
+        foreach ($ResultDN in (Get-Unique -InputObject $Result)) {
+            $ResultGroup = Get-ADGroup $ResultDN
+            if ($AsObject) {
+                $ResultGroup
+            }
+            else {
+                $ResultGroup.SamAccountName
+            }
         }
-        return $Result.SamAccountName | Sort-Object
     }
-
 }
 
 ##############################################################
