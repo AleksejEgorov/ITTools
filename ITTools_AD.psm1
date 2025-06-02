@@ -224,6 +224,64 @@ function Get-ADUserByName {
     end {}
 }
 
+
+function Get-ADGroupGroups {
+    [CmdletBinding()]
+    param (
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias("DistinguishedName")]
+        [string]$GroupName,
+
+        [Alias('Recurse')]
+        [switch]$Nested,
+
+        [switch]$AsObject,
+
+        [string]$Server = (& {Get-ADDomainController}).HostName
+    )
+
+    begin {
+        $Result = @()
+    }
+    process {
+
+        try {
+            $Group = Get-ADGroup $GroupName -Properties MemberOf -Server $Server -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "Group $GroupName is not found in $env:USERDOMAIN."
+            continue
+        }
+
+        # $Groups = New-Object 'List[ADGroup]'
+        foreach ($GroupDN in $Group.MemberOf) {
+            $ParentGroup = Get-ADGroup -Identity $GroupDN -Server $Server
+            Write-Progress -Activity 'Inspecting groups:' -CurrentOperation $ParentGroup.Name
+
+            $Result += $ParentGroup
+            if ($Nested) {
+                foreach ($NestedGroup in (Get-ADGroupGroups $GroupDN -Nested -AsObject)) {
+                    if ($Result.DistinguishedName -notcontains $NestedGroup.DistinguishedName) {
+                        $Result += $NestedGroup
+                    }
+                }
+            }
+        }
+    }
+    end {
+        if ($AsObject) {
+            return ($Result | Sort-Object SamAccountName)
+        }
+        return $Result.SamAccountName | Sort-Object
+    }
+
+}
+
 ##############################################################
 ####                  Define user's groups                ####
 ##############################################################
@@ -236,57 +294,51 @@ function Get-ADUserGroups {
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true
         )]
-        [Alias("SamAccountName")]
-        [string[]]$UserName,
+        [Alias("SamAccountName",'DistinguishedName')]
+        [string]$UserName,
 
-        [Parameter(Mandatory = $false)]
+        [Alias('Recurse')]
+        [switch]$Nested,
+
         [switch]$AsObject,
 
         [string]$Server = (& {Get-ADDomainController}).HostName
     )
 
     begin {
-        $Result = New-Object 'Dictionary[string,psobject]'
+        $Result = @()
     }
 
     process {
-        foreach ($User in $UserName) {
-            try {
-                $ADUser = Get-ADUser $User -Properties MemberOf -Server $Server -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "User $User not found in $env:USERDOMAIN."
-                continue
-            }
 
-            $GroupList = $ADUser.MemberOf
+        try {
+            $ADUser = Get-ADUser $UserName -Properties MemberOf -Server $Server -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "User $UserName not found in $env:USERDOMAIN."
+            continue
+        }
 
-            $Groups = New-Object 'List[ADGroup]'
-            foreach ($Group in $GroupList) {
-                $Groups += Get-ADGroup -Identity $Group -Server $Server
+        foreach ($Group in $ADUser.MemberOf) {
+            $UserGroup = Get-ADGroup -Identity $Group -Server $Server
+            $Result += $UserGroup
+            if ($Nested) {
+                foreach ($NestedGroup in (Get-ADGroupGroups $UserGroup -Nested -AsObject)) {
+                    if ($Result.DistinguishedName -notcontains $NestedGroup.DistinguishedName) {
+                        $Result += $NestedGroup
+                    }
+                }
             }
-            $UserResult = [PSCustomObject]@{
-                User = $ADUser
-                Groups = $Groups
-            }
-            $Result.Add($User,$UserResult)
-
         }
     }
 
     end {
         if ($AsObject) {
-            return $Result
+            return ($Result | Sort-Object SamAccountName)
         }
-        else {
-            foreach ($Record in $Result.Keys) {
-                Write-Host ":::::: $($Result.$Record.User.Name) ($($Result.$Record.User.UserPrincipalName)) ::::::" -ForegroundColor Green
-                foreach ($Group in $Result.$Record.Groups) {
-                    Write-Host $Group.Name
-                }
-            }
-        }
+        return $Result.SamAccountName | Sort-Object
     }
+
 }
 
 ##############################################################
@@ -831,7 +883,7 @@ function Get-ADGroupUsers {
                     }
                     elseif ($RemoteObject.objectClass -contains 'group') {
                         if (!$DirectOnly) {
-                            $Result += Get-ADGroupUsers -Name $RemoteName -Domain $RemoteDomain.DNSRoot -Properties $Properties                            
+                            $Result += Get-ADGroupUsers -Name $RemoteName -Domain $RemoteDomain.DNSRoot -Properties $Properties
                         }
                     }
                 }
@@ -950,8 +1002,8 @@ function Get-ADUserByMail {
         Get-ADUserByMail *@maildomain.tld -Wildcard
         Search all AD users with mail domain @maildomain.tld
     #>
-    
-    
+
+
     [CmdletBinding()]
     param (
         # Email address
@@ -977,7 +1029,7 @@ function Get-ADUserByMail {
         )]
         [string]$Filter = "(mail -like '*') -and (Enabled -eq 'true')",
 
-        # AD Propertiers 
+        # AD Propertiers
         [Parameter(
             Mandatory = $false
         )]
@@ -987,7 +1039,7 @@ function Get-ADUserByMail {
 
         [switch]$Renew
     )
-    
+
     begin {
         # Define search domains
         if (!$Server) {
@@ -1012,14 +1064,14 @@ function Get-ADUserByMail {
             }
         }
     }
-    
+
     process {
         foreach ($Address in $Mail) {
             Write-Progress -Activity "Searching" -Status $Address
             Write-Debug $Address
             if ($Wildcard) {
                 $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -like "smtp:$Address"})
-                
+
             }
             else {
                 $ADUsers = @($global:AllMailUsers | Where-Object {$PSItem.proxyAddresses -contains "smtp:$Address"})
@@ -1030,7 +1082,7 @@ function Get-ADUserByMail {
             $ADUsers | ForEach-Object {$PSItem}
         }
     }
-    
+
     end {}
 }
 
@@ -1086,7 +1138,7 @@ function New-DistributionGroupMigration {
             Mandatory = $false
         )]
         [pscredential]$FromCreds,
-        
+
         # Local Exchange credentials
         [Parameter(
             Mandatory = $false
@@ -1109,8 +1161,8 @@ function New-DistributionGroupMigration {
         [switch]$MigrateMembers
 
     )
-    
-    begin { 
+
+    begin {
         #region Create Sessions
             $FromExchange = @(((Get-ADGroupMember "Exchange Servers" -Server $FromDomain | Where-Object {$PSItem.objectClass -eq 'computer'}) | Get-ADComputer ).DnsHostName)[0]
             $ToExchange = @(((Get-ADGroupMember "Exchange Servers" -Server $ToDomain | Where-Object {$PSItem.objectClass -eq 'computer'}) | Get-ADComputer).DnsHostName)[0]
@@ -1159,7 +1211,7 @@ function New-DistributionGroupMigration {
         #endregion
 
     }
-    
+
     process {
         foreach ($GroupMail in $Mail) {
             try {
@@ -1285,7 +1337,7 @@ function New-DistributionGroupMigration {
                 }
             }
 
-            
+
             try {
                 Invoke-Command -Session $FromSession -ErrorAction Stop -ScriptBlock {
                     Remove-DistributionGroup $using:GroupMail -Confirm:$false
@@ -1323,11 +1375,11 @@ function New-DistributionGroupMigration {
             catch {
                 Write-Warning "Cannot add addresses to mail contact $TargetPrimarySmtpAddress in $FromDomain. $($global:Error[0].Exception.Message)"
             }
-        }        
+        }
     }
-    
+
     end {
         Remove-PSSession $FromSession
-        Remove-PSSession $ToSession  
+        Remove-PSSession $ToSession
     }
 }
