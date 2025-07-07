@@ -942,9 +942,11 @@ function Set-ADUserThumbnailPhoto {
 
     $ThumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize $ThumbnailSize -Quality 96))
     Set-ADUser -Identity $ADUser -Replace @{thumbnailPhoto = $ThumbnailPhoto}
+    Write-Verbose "Set thumbnailPhoto for $($ADUser.SamAccountName) to $($PhotoItem.FullName) with size $ThumbnailSize px"
     if ($Jpeg) {
         $JpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize $JpegSize -Quality 96))
         Set-ADUser -Identity $ADUser -Replace @{jpegPhoto = $JpegPhoto}
+        Write-Verbose "Set jpegPhoto for $($ADUser.SamAccountName) to $($PhotoItem.FullName) with size $JpegSize px"
     }
 }
 
