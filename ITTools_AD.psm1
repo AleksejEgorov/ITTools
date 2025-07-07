@@ -922,16 +922,28 @@ function Set-ADUserThumbnailPhoto {
         )]
         [string]$Path,
 
+        # thumbnailPhoto cancars size
+        [Parameter(
+            Mandatory = $false
+        )]
+        [int]$ThumbnailSize = 96,
+
+        # jpegPhoto cancars size
+        [Parameter(
+            Mandatory = $false
+        )]
+        [int]$JpegSize = 256,
+
         [switch]$Jpeg
     )
 
     $PhotoItem = Get-Item $Path -ErrorAction Stop
     $ADUser = Get-ADUser -Identity $Identity -ErrorAction Stop
 
-    $ThumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 96 -Quality 96))
+    $ThumbnailPhoto = [byte[]]($(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize $ThumbnailSize -Quality 96))
     Set-ADUser -Identity $ADUser -Replace @{thumbnailPhoto = $ThumbnailPhoto}
     if ($Jpeg) {
-        $JpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize 256 -Quality 96))
+        $JpegPhoto = [byte[]]( $(Get-ResizedPicture -ImageSource $PhotoItem.FullName -CanvasSize $JpegSize -Quality 96))
         Set-ADUser -Identity $ADUser -Replace @{jpegPhoto = $JpegPhoto}
     }
 }
