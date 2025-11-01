@@ -160,19 +160,14 @@ function ConvertTo-Encoding {
 ####                 Generate random password             ####
 ##############################################################
 function New-Password {
-    [cmdletbinding(DefaultParameterSetName='ConditionNumber')]
+    [CmdletBinding(DefaultParameterSetName='ConditionNumber')]
     param (
         [Parameter()]
-        [ValidateRange(7,[int]::MaxValue)]
+        [ValidateRange(4,64)]
         [int]$Length = 10,
 
-        [ValidateRange(0,[int]::MaxValue)]
-        [int]$SpecChar = 0,
-
         # Number of conditions
-        [Parameter(
-            ParameterSetName = 'ConditionNumber'
-        )]
+        [Parameter(ParameterSetName = 'ConditionNumber')]
         [ValidateRange(0,4)]
         [int]$Conditions = 3,
 
@@ -198,19 +193,20 @@ function New-Password {
         Symbols = '!@#$%^&*()-_=+<>'.ToCharArray()
     }
 
-    if ($Conditions) {
+    if ($UpperCase -or $LowerCase -or $Digits -or $SpecChars) {
+        if ($UpperCase) {$Needs += 'UppercaseLetters'}
+        if ($LowerCase) {$Needs += 'LowerCaseLetters'}
+        if ($Digits) {$Needs += 'Digits'}
+        if ($SpecChars) {$Needs += 'Symbols'}
+    }
+    else {
         for ($i = 0; $i -lt ($Conditions); $i++) {
             $Condition = $CharSets.Keys.Clone()[$i]
             $Needs += $Condition
             Write-Verbose "i = $i, now needs $Condition"
         }
     }
-    else {
-        if ($UpperCase) {$Needs += 'UppercaseLetters'}
-        if ($LowerCase) {$Needs += 'LowerCaseLetters'}
-        if ($Digits) {$Needs += 'Digits'}
-        if ($SpecChars) {$Needs += 'Symbols'}
-    }
+
 
     Write-Verbose "Needs: $([string]::Join(', ', $Needs))"
 
