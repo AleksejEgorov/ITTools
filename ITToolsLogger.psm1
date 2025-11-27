@@ -64,7 +64,7 @@ class ITToolsLogger {
                 switch -Regex ($Type) {
                     '^(File|CM)$' {
                         if (!$this.FilePath) {
-                            throw "$($Type) format requires file path. Usage: [Logger]::new('$($Type)', '$($this.Level)', `$FilePath)."
+                            throw "$($Type) format requires file path. Usage: [ITToolsLogger]::new('$($Type)', '$($this.Level)', `$FilePath)."
                         }
                         $this._type = $Type
                     }
@@ -90,8 +90,8 @@ class ITToolsLogger {
     )
 
     static Logger() {
-        $TypeName = [Logger].Name
-        foreach ($Definition in [Logger]::MemberDefinitions) {
+        $TypeName = [ITToolsLogger].Name
+        foreach ($Definition in [ITToolsLogger]::MemberDefinitions) {
             Update-TypeData -Force -TypeName $TypeName @Definition
         }
     }
