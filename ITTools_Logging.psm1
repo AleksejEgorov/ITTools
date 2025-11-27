@@ -1139,3 +1139,35 @@ function Get-SmtpLog {
         }
     }
 }
+
+
+function New-Logger {
+    [CmdletBinding()]
+    param (
+        # Type
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [ValidateSet('CM', 'File', 'Host', 'PS')]
+        [string]$Type,
+
+        # Logging level
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [ValidateSet('Debug', 'Info', 'Warning', 'Error')]
+        [string]$Level,
+
+        # File path
+        [Parameter()]
+        [string]
+        $FilePath
+    )
+
+    if ($FilePath) {
+        return [ITToolsLogger]::new($Type, $Level, $FilePath)
+    }
+    return [ITToolsLogger]::new($Type, $Level)
+}
