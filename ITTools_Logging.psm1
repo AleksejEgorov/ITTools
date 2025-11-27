@@ -1,3 +1,4 @@
+
 function Write-CMLog {
     <#
     .SYNOPSIS

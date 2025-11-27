@@ -66,12 +66,14 @@ PowerShellVersion = '5.0'
 # FormatsToProcess = @()
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
-NestedModules = @('ITTools_Classes.psm1', 
-               'ITTools_AD.psm1', 
-               'ITTools_Logging.psm1', 
-               'ITTools_FileProcessing.psm1', 
-               'ITTools_StringProcessing.psm1', 
-               'ITTools_Communications.psm1')
+NestedModules = @('ITTools_Classes.psm1',
+               'ITTools_AD.psm1',
+               'ITTools_Logging.psm1',
+               'ITTools_FileProcessing.psm1',
+               'ITTools_StringProcessing.psm1',
+               'ITTools_Communications.psm1',
+               'ITToolsLogger.psm1'
+               )
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = '*'
@@ -112,7 +114,8 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = '1.26.0.83 (26.10.2023): ConvertFrom-Ini and ConvertTo-Ini added. Minor fixes.
+        ReleaseNotes = '1.30.0.84 (27.11.2025): ITToolsLoggerClass added.
+1.26.0.83 (26.10.2023): ConvertFrom-Ini and ConvertTo-Ini added. Minor fixes.
 1.25.0.82 (01.12.2022): ITTools_Communications is separated.
 1.24.0.76 (09.08.2022): Get-NetShare added.
 1.23.0.75 (01.06.2022): Some cmdlets added.
@@ -145,7 +148,7 @@ Function Get-LoggedInUsers: Fixed work with multiple servers.'
         # ExternalModuleDependencies = ''
 
     } # End of PSData hashtable
-    
+
  } # End of PrivateData hashtable
 
 # HelpInfo URI of this module
