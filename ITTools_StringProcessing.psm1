@@ -160,43 +160,81 @@ function ConvertTo-Encoding {
 ####                 Generate random password             ####
 ##############################################################
 function New-Password {
+    [CmdletBinding(DefaultParameterSetName='ConditionNumber')]
     param (
         [Parameter()]
-        [ValidateRange(7,[int]::MaxValue)]
+        [ValidateRange(4,64)]
         [int]$Length = 10,
 
-        [ValidateRange(0,[int]::MaxValue)]
-        [int]$SpecChar = 0,
-
+        # Number of conditions
+        [Parameter(ParameterSetName = 'ConditionNumber')]
         [ValidateRange(0,4)]
-        [int]$Conditions = 4
+        [int]$Conditions = 3,
+
+        [Parameter(ParameterSetName = 'ConditionSpecified')]
+        [switch]$UpperCase,
+
+        [Parameter(ParameterSetName = 'ConditionSpecified')]
+        [switch]$LowerCase,
+
+        [Parameter(ParameterSetName = 'ConditionSpecified')]
+        [switch]$Digits,
+
+        [Parameter(ParameterSetName = 'ConditionSpecified')]
+        [switch]$SpecChars
     )
 
-    $CharacterList = @()
-    $Symbols = '!@#$%^&*()-_=+<>'.ToCharArray()
+    $Needs = @()
 
-    $CharacterList += 65..90 | ForEach-Object {[char]$_}
-    $CharacterList += 97..122 | ForEach-Object {[char]$_}
-    $CharacterList += 0..9
-    $CharacterList += $Symbols
+    $CharSets = [ordered]@{
+        UppercaseLetters = 65..90 | ForEach-Object {[char]$PSItem}
+        LowerCaseLetters = 97..122 | ForEach-Object {[char]$PSItem}
+        Digits = 0..9
+        Symbols = '!@#$%^&*()-_=+<>'.ToCharArray()
+    }
+
+    if ($UpperCase -or $LowerCase -or $Digits -or $SpecChars) {
+        if ($UpperCase) {$Needs += 'UppercaseLetters'}
+        if ($LowerCase) {$Needs += 'LowerCaseLetters'}
+        if ($Digits) {$Needs += 'Digits'}
+        if ($SpecChars) {$Needs += 'Symbols'}
+    }
+    else {
+        for ($i = 0; $i -lt ($Conditions); $i++) {
+            $Condition = $CharSets.Keys.Clone()[$i]
+            $Needs += $Condition
+            Write-Verbose "i = $i, now needs $Condition"
+        }
+    }
+
+
+    Write-Verbose "Needs: $([string]::Join(', ', $Needs))"
+
 
     do {
+        Write-Verbose "==== Generation started ===="
         $Passwd = ""
-        # for ($i = 0; $i -lt $Length; $i++) {
-        #     $RandomIndex = [System.Security.Cryptography.RandomNumberGenerator]::GetInt32(0, $CharacterList.Length)
-        #     $Passwd += $CharacterList[$RandomIndex]
-        # }
-        0..($Length - 1) | ForEach-Object {
-            $Passwd += $CharacterList | Get-Random
+        $ConditionMets = @()
+
+        for ($i = 0; $i -lt $Length; $i++) {
+            $Set = $Needs | Get-Random
+            $Char = $CharSets.$Set | Get-Random
+            $Passwd += $Char
+            Write-Verbose "Char $Char is $Set"
+            if ($Set -notin $ConditionMets) {
+                $ConditionMets += $Set
+                Write-Verbose "Condition $Set is met"
+            }
         }
-
-        [int]$hasLowerChar = $Passwd -cmatch '[a-z]'
-        [int]$hasUpperChar = $Passwd -cmatch '[A-Z]'
-        [int]$hasDigit = $Passwd -match '[0-9]'
-        [int]$hasSymbol = $Passwd -match '[\p{P}\p{S}]'
-
+        Write-Verbose "==== Generation ended ===="
     }
-    until (($hasLowerChar + $hasUpperChar + $hasDigit + $hasSymbol) -ge $Conditions)
+    while ($ConditionMets.Length -ne $Needs.Length)
+
+    Write-Verbose "Need conditions: $($Needs.Length)"
+    Write-Verbose "Condition mets: $($ConditionMets.Length)"
+    Write-Verbose "Conditions are mets: $([string]::Join(', ', $ConditionMets))"
+    Write-Verbose "Password is $Passwd"
+
 
     return $Passwd
 }
