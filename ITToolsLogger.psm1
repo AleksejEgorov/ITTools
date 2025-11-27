@@ -89,7 +89,7 @@ class ITToolsLogger {
         }
     )
 
-    static Logger() {
+    static ITToolsLogger() {
         $TypeName = [ITToolsLogger].Name
         foreach ($Definition in [ITToolsLogger]::MemberDefinitions) {
             Update-TypeData -Force -TypeName $TypeName @Definition
@@ -100,39 +100,39 @@ class ITToolsLogger {
 
     #region Constructors
 
-    Logger() {}
+    ITToolsLogger() {}
 
-    Logger([hashtable]$LogConfig) {
+    ITToolsLogger([hashtable]$LogConfig) {
         $this.FilePath = $LogConfig.FilePath
         $this.Level = $LogConfig.Level
         $this.Type = $LogConfig.Type
     }
 
-    Logger([PSCustomObject]$LogConfig) {
+    ITToolsLogger([PSCustomObject]$LogConfig) {
         $this.FilePath = $LogConfig.FilePath
         $this.Level = $LogConfig.Level
         $this.Type = $LogConfig.Type
     }
 
-    Logger([string]$Type) {
+    ITToolsLogger([string]$Type) {
         $this.FilePath = $null
         $this.Level = 1
         $this.Type = $Type
     }
 
-    Logger([string]$Type, [int]$Level) {
+    ITToolsLogger([string]$Type, [int]$Level) {
         $this.FilePath = $null
         $this.Level = $Level
         $this.Type = $Type
     }
 
-    Logger([string]$Type, [string]$Level) {
+    ITToolsLogger([string]$Type, [string]$Level) {
         $this.FilePath = $null
         $this.Level = $Level
         $this.Type = $Type
     }
 
-    Logger([string]$Type, [int]$Level, [string]$FilePath) {
+    ITToolsLogger([string]$Type, [int]$Level, [string]$FilePath) {
         $this.FilePath = $FilePath
         $this.Level = $Level
 
@@ -140,7 +140,7 @@ class ITToolsLogger {
         $this.Type = $Type
     }
 
-    Logger([string]$Type, [string]$Level, [string]$FilePath) {
+    ITToolsLogger([string]$Type, [string]$Level, [string]$FilePath) {
         $this.FilePath = $FilePath
         $this.Level = $Level
         $this.Type = $Type
