@@ -1,4 +1,4 @@
-
+using module .\ITToolsLogger.psm1
 function Write-CMLog {
     <#
     .SYNOPSIS
