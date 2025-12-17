@@ -170,42 +170,44 @@ class ITToolsLogger {
     }
 
     [void] Info([string]$Message) {
-        if ($this._level -le 1) {
-            $Line = [string]::Format($this.StdLogLine, [DateTime]::Now, 'INFO', $Message)
+        if ($this._level -gt 1) {
+            break
+        }
+        $Line = [string]::Format($this.StdLogLine, [DateTime]::Now, 'INFO', $Message)
 
-            if ($this.Type -eq 'CM') {
-                $this.WriteLineToFile($this.NewCMLogEntry($Message, 1))
-            }
-            elseif ($this.Type -eq 'PS') {
-                $InformationPreference = 'Continue'
-                Write-Information -MessageData $Message
-            }
-            elseif ($this.Type -eq 'Host') {
-                $this.PrintHostLine($Line, 1)
-            }
-            elseif ($this.Type -eq 'File') {
-                $this.WriteLineToFile($Line)
-            }
+        if ($this.Type -eq 'CM') {
+            $this.WriteLineToFile($this.NewCMLogEntry($Message, 1))
+        }
+        elseif ($this.Type -eq 'PS') {
+            $InformationPreference = 'Continue'
+            Write-Information -MessageData $Message
+        }
+        elseif ($this.Type -eq 'Host') {
+            $this.PrintHostLine($Line, 1)
+        }
+        elseif ($this.Type -eq 'File') {
+            $this.WriteLineToFile($Line)
         }
     }
 
     [void] Warning([string]$Message) {
-        if ($this.Level -le 2) {
-            $Line = [string]::Format($this.StdLogLine, [DateTime]::Now, 'WARN', $Message)
+        if ($this.Level -gt 2) {
+            break
+        }
+        $Line = [string]::Format($this.StdLogLine, [DateTime]::Now, 'WARN', $Message)
 
-            if ($this.Type -eq 'CM') {
-                $this.WriteLineToFile($this.NewCMLogEntry($Message, 2))
-            }
-            elseif ($this.Type -eq 'PS') {
-                $WarningPreference = 'Continue'
-                Write-Warning -Message $Message
-            }
-            elseif ($this.Type -eq 'Host') {
-                $this.PrintHostLine($Line, 2)
-            }
-            elseif ($this.Type -eq 'File') {
-                $this.WriteLineToFile($Line)
-            }
+        if ($this.Type -eq 'CM') {
+            $this.WriteLineToFile($this.NewCMLogEntry($Message, 2))
+        }
+        elseif ($this.Type -eq 'PS') {
+            $WarningPreference = 'Continue'
+            Write-Warning -Message $Message
+        }
+        elseif ($this.Type -eq 'Host') {
+            $this.PrintHostLine($Line, 2)
+        }
+        elseif ($this.Type -eq 'File') {
+            $this.WriteLineToFile($Line)
         }
     }
 
