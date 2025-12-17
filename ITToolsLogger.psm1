@@ -159,7 +159,7 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'PS') {
             $InformationPreference = 'Continue'
-            Write-Information -MessageData $Message
+            Write-Information -MessageData $Line
         }
         elseif ($this.Type -eq 'Host') {
             $this.PrintHostLine($Line, 0)
@@ -180,7 +180,7 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'PS') {
             $InformationPreference = 'Continue'
-            Write-Information -MessageData $Message
+            Write-Information -MessageData $Line
         }
         elseif ($this.Type -eq 'Host') {
             $this.PrintHostLine($Line, 1)
@@ -201,7 +201,7 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'PS') {
             $WarningPreference = 'Continue'
-            Write-Warning -Message $Message
+            Write-Warning -Message $Line
         }
         elseif ($this.Type -eq 'Host') {
             $this.PrintHostLine($Line, 2)
@@ -222,7 +222,7 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'PS') {
             $ErrorActionPreference = 'Continue'
-            Write-Error -Message $Message
+            Write-Error -Message $Line
         }
         elseif ($this.Type -eq 'Host') {
             $this.PrintHostLine($Line, 3)
