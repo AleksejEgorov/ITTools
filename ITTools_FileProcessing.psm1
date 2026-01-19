@@ -720,6 +720,12 @@ function New-WebServerCertificate {
 
         [Parameter(
             Mandatory = $false,
+            ParameterSetName = 'SelfSigned'
+        )]
+        [int]$ValidityDays = 3650,
+
+        [Parameter(
+            Mandatory = $false,
             ParameterSetName = 'CSR'
         )]
         [switch]$CSR
@@ -758,8 +764,24 @@ function New-WebServerCertificate {
     [string[]]$SANs = @($CommonName, $BaseName) + $SANs
     $SANs = $SANs | Where-Object {$PSItem} | Select-Object -Unique
 
-    for ($i = 1; $i -le $SANs.Count; $i++) {
-        $Config += "DNS.$i = $($SANs[$i - 1])"
+    $DNSNames = @()
+    $IPAddresses = @()
+
+    foreach ($SAN in $SANs) {
+        try {
+            $IPAddresses += ([IPAddress]::Parse($SAN)).IPAddressToString
+        }
+        catch {
+            $DNSNames += $SAN
+        }
+    }
+
+    for ($i = 1; $i -le $DNSNames.Count; $i++) {
+        $Config += "DNS.$i = $($DNSNames[$i - 1])"
+    }
+
+    for ($i = 1; $i -le $IPAddresses.Count; $i++) {
+        $Config += "IP.$i = $($IPAddresses[$i - 1])"
     }
 
     Write-Verbose "Config content:`n$($Config -join "`n")"
@@ -769,7 +791,7 @@ function New-WebServerCertificate {
         # Self-signed cert
         openssl req -x509 `
             -nodes `
-            -days 3650 `
+            -days $ValidityDays `
             -newkey rsa:2048 `
             -keyout ([System.IO.Path]::Combine($Path,"$FileBaseName.key")) `
             -out ([System.IO.Path]::Combine($Path,"$FileBaseName.crt")) `
