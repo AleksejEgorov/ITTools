@@ -774,7 +774,8 @@ function New-WebServerCertificate {
             -keyout ([System.IO.Path]::Combine($Path,"$FileBaseName.key")) `
             -out ([System.IO.Path]::Combine($Path,"$FileBaseName.crt")) `
             -config ([System.IO.Path]::Combine($Path,"$FileBaseName.cnf")) `
-            -extensions 'v3_req'
+            -extensions 'v3_req' | `
+            Out-Null
         Write-Verbose "Cert created:`n$((openssl x509 -in ([System.IO.Path]::Combine($Path,"$FileBaseName.crt")) -noout -text) -join "`n")"
     }
     elseif ($CSR) {
@@ -784,7 +785,8 @@ function New-WebServerCertificate {
             -newkey rsa:2048 `
             -keyout ([System.IO.Path]::Combine($Path,"$FileBaseName.key")) `
             -out ([System.IO.Path]::Combine($Path,"$FileBaseName.csr")) `
-            -config ([System.IO.Path]::Combine($Path,"$FileBaseName.cnf"))
+            -config ([System.IO.Path]::Combine($Path,"$FileBaseName.cnf")) | `
+            Out-Null
         Write-Verbose "CSR is:`n$(Get-Content -Path ([System.IO.Path]::Combine($Path,"$FileBaseName.csr")) -Raw)"
     }
 }
