@@ -534,8 +534,8 @@ function ConvertFrom-Ini {
     .SYNOPSIS
         Convert ini-file text to powershell object.
     .DESCRIPTION
-        Convert ini-file text to powershell object. You can pass content as string or string array. 
-        Pipelines supported. With -Verbose you can see line numbers. Comments and empty lines will be ignored. 
+        Convert ini-file text to powershell object. You can pass content as string or string array.
+        Pipelines supported. With -Verbose you can see line numbers. Comments and empty lines will be ignored.
     .INPUTS
         Content as System.String[]
     .OUTPUTS
@@ -547,7 +547,7 @@ function ConvertFrom-Ini {
         PS> ConvertFrom-Ini (Get-Content C:\Settings.ini -Raw)
         Convert raw content of C:\Settings.ini to powershell object using positional parameter.
     .EXAMPLE
-        Get-Content C:\Settings.ini | ConvertFrom-Ini 
+        Get-Content C:\Settings.ini | ConvertFrom-Ini
         Convert content of C:\Settings.ini to powershell object using pipeline.
     #>
     [CmdletBinding()]
@@ -556,17 +556,17 @@ function ConvertFrom-Ini {
         [Parameter(
             Mandatory = $true,
             Position = 0,
-            ValueFromPipeline = $true            
+            ValueFromPipeline = $true
         )]
         [AllowEmptyString()]
         [string[]]$Content
     )
-    
+
     begin {
         $MultilineContent = @()
         $Ini = [Dictionary[[string],[Dictionary[[string],[string]]]]]::new()
     }
-    
+
     process {
         # Reformat content to multiline mode.
         foreach($Row in $Content) {
@@ -581,7 +581,7 @@ function ConvertFrom-Ini {
             }
         }
     }
-    
+
     end {
         $i = 0
 
@@ -613,7 +613,7 @@ function ConvertTo-Ini {
     .SYNOPSIS
         Convert ini object to string array.
     .DESCRIPTION
-       Convert ini object (i.e created with ConvertFrom-Ini) to ini content string array. 
+       Convert ini object (i.e created with ConvertFrom-Ini) to ini content string array.
        You can pass object as [Dictionary[[string],[Dictionary[[string],[string]]]]] or [hashtable] (not recommended).
        Pipelines supported.
     .INPUTS
@@ -656,11 +656,11 @@ function ConvertTo-Ini {
         )]
         [psobject]$InputObject
     )
-    
+
     begin {
-        $Content = @()        
+        $Content = @()
     }
-    
+
     process {
         foreach ($Ini in $InputObject) {
             foreach ($SectionName in $Ini.Keys) {
@@ -670,10 +670,121 @@ function ConvertTo-Ini {
                 }
             }
 
-        }        
+        }
     }
-    
+
     end {
         return $Content
+    }
+}
+
+function New-WebServerCertificate {
+    [CmdletBinding(
+        DefaultParameterSetName = 'SelfSigned'
+    )]
+    param (
+        # Cert commonName
+        [Parameter(
+            Mandatory = $true,
+            Position = 0
+        )]
+        [string]
+        $CommonName,
+
+        # Path to files
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        )]
+        [string]
+        $Path,
+
+        # Cert DNS SANs
+        [Parameter(
+            Mandatory = $false,
+            Position = 2
+        )]
+        [string[]]$SANs,
+
+        [string]$Country = 'RU',
+        [string]$State = 'Moscow',
+        [string]$Locality = 'Moscow',
+        [string]$Organization = 'Private Person',
+        [string]$OrganizationalUnit = 'IT',
+
+        [Parameter(
+            Mandatory = $false,
+            ParameterSetName = 'SelfSigned'
+        )]
+        [switch]$SelfSigned,
+
+        [Parameter(
+            Mandatory = $false,
+            ParameterSetName = 'CSR'
+        )]
+        [switch]$CSR
+    )
+
+    if (!$SelfSigned -and !$CSR) {
+        $SelfSigned = $true
+    }
+
+    # Config
+    $Config = @(
+        "[req]",
+        "distinguished_name = req_dn",
+        "x509_extensions = v3_req",
+        "prompt = no",
+        "",
+        "[req_dn]",
+        "C = $Country",
+        "ST = $State",
+        "L = $Locality",
+        "O = $Organization",
+        "OU = $OrganizationalUnit",
+        "CN = $CommonName"
+        "",
+        "[v3_req]",
+        "keyUsage = keyEncipherment, dataEncipherment",
+        "extendedKeyUsage = serverAuth",
+        "subjectAltName = @alt_names",
+        "",
+        "[alt_names]"
+    )
+
+    $BaseName = $CommonName.Split('.')[0]
+    $FileBaseName = "$($BaseName)_$(Get-Date -Format 'yyyy-MM-dd')"
+
+    [string[]]$SANs = @($CommonName, $BaseName) + $SANs
+    $SANs = $SANs | Where-Object {$PSItem} | Select-Object -Unique
+
+    for ($i = 1; $i -le $SANs.Count; $i++) {
+        $Config += "DNS.$i = $($SANs[$i - 1])"
+    }
+
+    Write-Verbose "Config content:`n$($Config -join "`n")"
+    $Config | Out-File -FilePath ([System.IO.Path]::Combine($Path,"$FileBaseName.cnf")) -Encoding ASCII -Force
+
+    if ($SelfSigned) {
+        # Self-signed cert
+        openssl req -x509 `
+            -nodes `
+            -days 3650 `
+            -newkey rsa:2048 `
+            -keyout ([System.IO.Path]::Combine($Path,"$FileBaseName.key")) `
+            -out ([System.IO.Path]::Combine($Path,"$FileBaseName.crt")) `
+            -config ([System.IO.Path]::Combine($Path,"$FileBaseName.cnf")) `
+            -extensions 'v3_req'
+        Write-Verbose "Cert created:`n$((openssl x509 -in ([System.IO.Path]::Combine($Path,"$FileBaseName.crt")) -noout -text) -join "`n")"
+    }
+    elseif ($CSR) {
+        # CSR
+        openssl req `
+            -nodes `
+            -newkey rsa:2048 `
+            -keyout ([System.IO.Path]::Combine($Path,"$FileBaseName.key")) `
+            -out ([System.IO.Path]::Combine($Path,"$FileBaseName.csr")) `
+            -config ([System.IO.Path]::Combine($Path,"$FileBaseName.cnf"))
+        Write-Verbose "CSR is:`n$(Get-Content -Path ([System.IO.Path]::Combine($Path,"$FileBaseName.csr")) -Raw)"
     }
 }
