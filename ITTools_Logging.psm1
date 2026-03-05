@@ -1157,8 +1157,8 @@ function New-Logger {
             Mandatory = $true,
             Position = 1
         )]
-        [ValidateSet('Debug', 'Info', 'Warning', 'Error')]
-        [string]$Level,
+        [ValidateSet('Debug', 'Info', 'Warning', 'Error', 0, 1, 2, 3)]
+        [object]$Level,
 
         # File path
         [Parameter()]
@@ -1166,8 +1166,6 @@ function New-Logger {
         $FilePath
     )
 
-    if ($FilePath) {
-        return [ITToolsLogger]::new($Type, $Level, $FilePath)
-    }
-    return [ITToolsLogger]::new($Type, $Level)
+    $Logger = New-Object -TypeName ITToolsLogger -ArgumentList @($Type, $Level, $FilePath)
+    return $Logger
 }

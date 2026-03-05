@@ -66,7 +66,16 @@ class ITToolsLogger {
                         if (!$this.FilePath) {
                             throw "$($Type) format requires file path. Usage: [ITToolsLogger]::new('$($Type)', '$($this.Level)', `$FilePath)."
                         }
+                        if (!(Test-Path $this.FilePath)) {
+                            try {
+                                [void](New-Item -Path $this.FilePath -ItemType File -Force -ErrorAction Stop)
+                            }
+                            catch {
+                                throw "Failed to create log file at $($this.FilePath): $($Error[0].Exception.Message)"
+                            }
+                        }
                         $this._type = $Type
+                        $this.Info("Log file $($this.FilePath) created.")
                     }
                     '^(Host|PS)' {
                         $this._type = $Type
@@ -100,50 +109,52 @@ class ITToolsLogger {
 
     #region Constructors
 
-    ITToolsLogger() {}
-
-    ITToolsLogger([hashtable]$LogConfig) {
-        $this.FilePath = $LogConfig.FilePath
-        $this.Level = $LogConfig.Level
-        $this.Type = $LogConfig.Type
-    }
-
-    ITToolsLogger([PSCustomObject]$LogConfig) {
-        $this.FilePath = $LogConfig.FilePath
-        $this.Level = $LogConfig.Level
-        $this.Type = $LogConfig.Type
-    }
-
-    ITToolsLogger([string]$Type) {
-        $this.FilePath = $null
+    ITToolsLogger() {
         $this.Level = 1
-        $this.Type = $Type
+        $this.Type = 'Host'
     }
 
-    ITToolsLogger([string]$Type, [int]$Level) {
-        $this.FilePath = $null
-        $this.Level = $Level
-        $this.Type = $Type
+    ITToolsLogger([object]$LogConfig) {
+        if ($LogConfig -is [PSCustomObject] -or $LogConfig -is [hashtable]) {
+            if (-not ($LogConfig.PSObject.Properties.Name -contains 'Type')) {
+                $this.FilePath = $LogConfig.FilePath
+                $this.Level = $LogConfig.Level
+                $this.Type = $LogConfig.Type
+            }
+        }
+        elseif ($LogConfig -is [string]) {
+            $this.FilePath = $null
+            $this.Level = 1
+            $this.Type = $LogConfig
+        }
+        else {
+            throw "Unsupported argument type. Use hashtable or PSCustomObject with properties Type, Level and FilePath as log config or string as log type."
+        }
+
     }
 
-    ITToolsLogger([string]$Type, [string]$Level) {
-        $this.FilePath = $null
-        $this.Level = $Level
-        $this.Type = $Type
+    ITToolsLogger([string]$Type, [object]$Level) {
+        if ($Level -is [string] -or $Level -is [int]) {
+            $this.FilePath = $null
+            $this.Level = $Level
+            $this.Type = $Type
+        }
+        else {
+            throw "Unsupported level type. Use [int] or [string] for level."
+        }
+
     }
 
-    ITToolsLogger([string]$Type, [int]$Level, [string]$FilePath) {
-        $this.FilePath = $FilePath
-        $this.Level = $Level
 
-
-        $this.Type = $Type
-    }
-
-    ITToolsLogger([string]$Type, [string]$Level, [string]$FilePath) {
-        $this.FilePath = $FilePath
-        $this.Level = $Level
-        $this.Type = $Type
+    ITToolsLogger([string]$Type, [object]$Level, [string]$FilePath) {
+        if ($Level -is [string] -or $Level -is [int]) {
+            $this.FilePath = $FilePath
+            $this.Level = $Level
+            $this.Type = $Type
+        }
+        else {
+            throw "Unsupported level type. Use [int] or [string] for level."
+        }
     }
     #endregion
 
@@ -280,7 +291,12 @@ class ITToolsLogger {
 
     hidden [void] WriteLineToFile([string]$Line) {
         if (!(Test-Path $this.FilePath)) {
-            [void](New-Item -Path $this.FilePath -ItemType File -Force)
+            try {
+                [void](New-Item -Path $this.FilePath -ItemType File -Force -ErrorAction Stop)
+            }
+            catch {
+                throw "Failed to create log file at $($this.FilePath): $($Error[0].Exception.Message)"
+            }
             $this.Info("Log file $($this.FilePath) created.")
         }
 
