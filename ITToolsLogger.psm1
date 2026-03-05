@@ -334,7 +334,7 @@ class ITToolsLogger {
             $Component = $global:MyInvocation.MyCommand.Name
         }
         if (!$Component) {
-            $Component = $MyInvocation.PSCommandPath
+            $Component = $global:MyInvocation.PSCommandPath
         }
         if (!$Component) {
             $Component = "PSConsole"
