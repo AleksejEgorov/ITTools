@@ -978,41 +978,41 @@ function Install-CMApplication {
 }
 
 
-function Connect-Exchange {
-    param (
-        [Parameter(Mandatory = $false)]
-        [string]$Server
-    )
-    $ExchangeFolder = ([System.IO.Path]::Combine($env:ProgramFiles,'Microsoft','Exchange Server'))
-    if ((Test-Path $ExchangeFolder)) {
-        $ExchangeDistrPath = (Get-ChildItem $ExchangeFolder | Sort-Object Name -Descending | Select-Object -First 1).FullName
-        $ExchangeModulePath = ([System.IO.Path]::Combine($ExchangeDistrPath,'bin','RemoteExchange.ps1'))
-        if ((Test-Path $ExchangeModulePath)) {
-            . $ExchangeModulePath
+# function Connect-Exchange {
+#     param (
+#         [Parameter(Mandatory = $false)]
+#         [string]$Server
+#     )
+#     $ExchangeFolder = ([System.IO.Path]::Combine($env:ProgramFiles,'Microsoft','Exchange Server'))
+#     if ((Test-Path $ExchangeFolder)) {
+#         $ExchangeDistrPath = (Get-ChildItem $ExchangeFolder | Sort-Object Name -Descending | Select-Object -First 1).FullName
+#         $ExchangeModulePath = ([System.IO.Path]::Combine($ExchangeDistrPath,'bin','RemoteExchange.ps1'))
+#         if ((Test-Path $ExchangeModulePath)) {
+#             . $ExchangeModulePath
 
-            $ConnectParams = @{
-                ClientApplication = 'ManagementShell'
-                AllowClobber = $true
-            }
+#             $ConnectParams = @{
+#                 ClientApplication = 'ManagementShell'
+#                 AllowClobber = $true
+#             }
 
-            if ($Server) {
-                if ($Server -notmatch '\.') {
-                    $Server = "$Server.$env:USERDNSDOMAIN"
-                }
-                $ConnectParams.ServerFqdn = $Server
-            }
-            else {
-                $ConnectParams.Forest = (Get-ADDomain $env:USERDNSDOMAIN).Forest
-                $ConnectParams.Auto = $true
-            }
+#             if ($Server) {
+#                 if ($Server -notmatch '\.') {
+#                     $Server = "$Server.$env:USERDNSDOMAIN"
+#                 }
+#                 $ConnectParams.ServerFqdn = $Server
+#             }
+#             else {
+#                 $ConnectParams.Forest = (Get-ADDomain $env:USERDNSDOMAIN).Forest
+#                 $ConnectParams.Auto = $true
+#             }
 
-            Connect-ExchangeServer @ConnectParams
-        }
-        else {
-            Import-PSSession (New-ExchangeSession) -AllowClobber
-        }
-    }
-    else {
-        Import-PSSession (New-ExchangeSession) -AllowClobber
-    }
-}
+#             Connect-ExchangeServer @ConnectParams
+#         }
+#         else {
+#             Import-PSSession (New-ExchangeSession) -AllowClobber
+#         }
+#     }
+#     else {
+#         Import-PSSession (New-ExchangeSession) -AllowClobber
+#     }
+# }
