@@ -11,65 +11,65 @@ function Send-EMail {
         [ValidateNotNullOrEmpty()]
         [Collections.HashTable]
         ${InlineAttachments},
-        
+
         [ValidateNotNullOrEmpty()]
         [Net.Mail.MailAddress[]]
         ${Bcc},
-    
+
         [Parameter(Position=2)]
         [ValidateNotNullOrEmpty()]
         [string]
         ${Body},
-        
+
         [Alias('BAH')]
         [switch]
         ${BodyAsHtml},
-    
+
         [ValidateNotNullOrEmpty()]
         [Net.Mail.MailAddress[]]
         ${Cc},
-    
+
         [Alias('DNO')]
         [ValidateNotNullOrEmpty()]
         [Net.Mail.DeliveryNotificationOptions]
         ${DeliveryNotificationOption},
-    
+
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [Net.Mail.MailAddress]
         ${From},
-    
+
         [Parameter(Mandatory = $true, Position = 3)]
         [Alias('ComputerName')]
         [string]
         ${SmtpServer},
-    
+
         [ValidateNotNullOrEmpty()]
         [Net.Mail.MailPriority]
         ${Priority},
-        
+
         [Parameter(Mandatory=$true, Position=1)]
         [Alias('sub')]
         [ValidateNotNullOrEmpty()]
         [string]
         ${Subject},
-    
+
         [Parameter(Mandatory=$true, Position=0)]
         [Net.Mail.MailAddress[]]
         ${To},
-    
+
         [ValidateNotNullOrEmpty()]
         [Management.Automation.PSCredential]
         ${Credential},
-    
+
         [switch]
         ${UseSsl},
-    
+
         [ValidateRange(0, 2147483647)]
         [int]
         ${Port} = 25
     )
-    
+
     begin
     {
         function FileNameToContentType
@@ -443,7 +443,7 @@ function Send-EMail {
         try
         {
             $_smtpClient = New-Object Net.Mail.SmtpClient
-        
+
             $_smtpClient.Host = $SmtpServer
             $_smtpClient.Port = $Port
             $_smtpClient.EnableSsl = $UseSsl
@@ -462,10 +462,10 @@ function Send-EMail {
             }
 
             $_message = New-Object Net.Mail.MailMessage
-        
+
             $_message.From = $From
             $_message.Subject = $Subject
-            
+
             if ($BodyAsHtml)
             {
                 $_bodyPart = [Net.Mail.AlternateView]::CreateAlternateViewFromString($Body, 'text/html')
@@ -473,7 +473,7 @@ function Send-EMail {
             else
             {
                 $_bodyPart = [Net.Mail.AlternateView]::CreateAlternateViewFromString($Body, 'text/plain')
-            }   
+            }
 
             $_message.AlternateViews.Add($_bodyPart)
 
@@ -512,7 +512,7 @@ function Send-EMail {
             foreach ($_entry in $InlineAttachments.GetEnumerator())
             {
                 $_file = $_entry.Value.ToString()
-                
+
                 if ([string]::IsNullOrEmpty($_file))
                 {
                     $_message.Dispose()
@@ -555,7 +555,7 @@ function Send-EMail {
             }
         }
     }
-    
+
     end
     {
         try
@@ -904,11 +904,11 @@ function Update-CMDeployments {
         [Alias('DnsHostName')]
         [string[]]$ComputerName
     )
-    
+
     begin {
-        
+
     }
-    
+
     process {
         foreach ($Name in $ComputerName) {
             Write-Verbose $Name
@@ -924,13 +924,13 @@ function Update-CMDeployments {
                     '{00000000-0000-0000-0000-000000000121}',
                     '{00000000-0000-0000-0000-000000000021}'
                 ) | ForEach-Object {Invoke-WMIMethod -Namespace "Root\CCM" -Class SMS_CLIENT -Name TriggerSchedule -ArgumentList $PSItem}
-                
+
                 }
             }
         }
-    
+
     end {
-        
+
     }
 }
 
@@ -954,9 +954,9 @@ function Install-CMApplication {
         )]
         [string]$Name
     )
-    
+
     begin {}
-    
+
     process {
         foreach ($Computer in $ComputerName) {
             Write-Verbose $Computer
@@ -968,11 +968,51 @@ function Install-CMApplication {
                 } | ForEach-Object {
                     # https://learn.microsoft.com/en-us/mem/configmgr/develop/reference/core/clients/sdk/install-method-in-class-ccm_application?redirectedfrom=MSDN
                     ([wmiclass]'Root\CCM\ClientSDK:CCM_Application').Install($PSItem.ID, $PSItem.Revision, $PSItem.IsMachineTarget, 0, "Normal", $false)
-                }  
+                }
             }
         }
-        
+
     }
-    
+
     end {}
+}
+
+
+function Connect-Exchange {
+    param (
+        [Parameter(Mandatory = $false)]
+        [string]$Server
+    )
+    $ExchangeFolder = ([System.IO.Path]::Combine($env:ProgramFiles,'Microsoft','Exchange Server'))
+    if ((Test-Path $ExchangeFolder)) {
+        $ExchangeDistrPath = (Get-ChildItem $ExchangeFolder | Sort-Object Name -Descending | Select-Object -First 1).FullName
+        $ExchangeModulePath = ([System.IO.Path]::Combine($ExchangeDistrPath,'bin','RemoteExchange.ps1'))
+        if ((Test-Path $ExchangeModulePath)) {
+            . $ExchangeModulePath
+
+            $ConnectParams = @{
+                ClientApplication = 'ManagementShell'
+                AllowClobber = $true
+            }
+
+            if ($Server) {
+                if ($Server -notmatch '\.') {
+                    $Server = "$Server.$env:USERDNSDOMAIN"
+                }
+                $ConnectParams.ServerFqdn = $Server
+            }
+            else {
+                $ConnectParams.Forest = (Get-ADDomain $env:USERDNSDOMAIN).Forest
+                $ConnectParams.Auto = $true
+            }
+
+            Connect-ExchangeServer @ConnectParams
+        }
+        else {
+            Import-PSSession (New-ExchangeSession) -AllowClobber
+        }
+    }
+    else {
+        Import-PSSession (New-ExchangeSession) -AllowClobber
+    }
 }
