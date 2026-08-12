@@ -4,6 +4,7 @@ class ITToolsLogger {
     hidden [ValidateRange(0,3)]                     [int] $_level
     hidden [ValidateSet('Host','PS','File','CM')]   [string] $_type
                                                     [string] $StdLogLine = "{0:dd.MM.yyyy HH.mm.ss.fff} [{1}] {2}"
+                                                    [bool] $_fileAndHost
 
     static [hashtable[]] $MemberDefinitions = @(
         @{
@@ -96,6 +97,20 @@ class ITToolsLogger {
             Value = {$this._filePath}
             SecondValue = {$this._filePath = $args[0]}
         }
+        @{
+            MemberType = 'ScriptProperty'
+            MemberName = 'OutHost'
+            Value = {$this._fileAndHost}
+            SecondValue = {
+                if ($Type -eq 'File') {
+                    $this._fileAndHost = $args[0]
+                }
+                else {
+                    $this.Warning('Out to file and host is supported only for File type')
+                    $this._fileAndHost = $false
+                }
+            }
+        }
     )
 
     static ITToolsLogger() {
@@ -156,6 +171,18 @@ class ITToolsLogger {
             throw "Unsupported level type. Use [int] or [string] for level."
         }
     }
+
+    ITToolsLogger([string]$Type, [object]$Level, [string]$FilePath, [bool]$OutHost) {
+        if ($Level -is [string] -or $Level -is [int]) {
+            $this.FilePath = $FilePath
+            $this.Level = $Level
+            $this.Type = $Type
+            $this.OutHost = $OutHost
+        }
+        else {
+            throw "Unsupported level type. Use [int] or [string] for level."
+        }
+    }
     #endregion
 
     #region Public methods
@@ -177,6 +204,9 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'File') {
             $this.WriteLineToFile($Line)
+            if ($this.OutHost) {
+                $this.PrintHostLine($Line, 0)
+            }
         }
     }
 
@@ -198,6 +228,9 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'File') {
             $this.WriteLineToFile($Line)
+            if ($this.OutHost) {
+                $this.PrintHostLine($Line, 1)
+            }
         }
     }
 
@@ -219,6 +252,9 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'File') {
             $this.WriteLineToFile($Line)
+            if ($this.OutHost) {
+                $this.PrintHostLine($Line, 2)
+            }
         }
     }
 
@@ -240,6 +276,9 @@ class ITToolsLogger {
         }
         elseif ($this.Type -eq 'File') {
             $this.WriteLineToFile($Line)
+            if ($this.OutHost) {
+                $this.PrintHostLine($Line, 3)
+            }
         }
     }
     #endregion

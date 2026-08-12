@@ -1163,9 +1163,11 @@ function New-Logger {
         # File path
         [Parameter()]
         [string]
-        $FilePath
+        $FilePath,
+
+        [switch]$OutHost
     )
 
-    $Logger = New-Object -TypeName ITToolsLogger -ArgumentList @($Type, $Level, $FilePath)
+    $Logger = New-Object -TypeName ITToolsLogger -ArgumentList @($Type, $Level, $FilePath, $OutHost.IsPresent)
     return $Logger
 }
