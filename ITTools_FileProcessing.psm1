@@ -836,15 +836,27 @@ function Protect-RdpFile {
 
     begin {
         if (!$Thumbprint) {
-            $CodeSignCert = Get-ChildItem 'Cert:\CurrentUser\My\' | Where-Object {
+            $CodeSignCerts = Get-ChildItem 'Cert:\CurrentUser\My\' | Where-Object {
                 ($PSItem.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.5.5.7.3.3') -and
                 (Test-Certificate $PSItem)
             }
-            if (!$CodeSignCert) {
+            if (!$CodeSignCerts) {
                 throw "No valid code signing certificate found."
             }
+            elseif ($CodeSignCerts.Count -gt 1) {
+                [string]$MultipleWarning = "Multiple valid Code Signing certificates found.`n`n"
+                $i = 0
+                foreach ($Cert in $CodeSignCerts) {
+                    $i++
+                    $MultipleWarning += "$i. $($Cert.Subject) ($($Cert.Thumbprint))`n"
+                }
+                $MultipleWarning += "`nFirst will be used."
+                Write-Warning $MultipleWarning
+            }
+
+            $CodeSignCert = $CodeSignCerts[0]
             $Thumbprint = $CodeSignCert.Thumbprint
-            Write-Verbose "Using certificate $($CodeSignCert.FriendlyName) ($Thumbprint)"
+            Write-Verbose "Using certificate $($CodeSignCert.Subject) ($Thumbprint)"
         }
     }
 
