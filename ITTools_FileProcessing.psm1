@@ -812,3 +812,49 @@ function New-WebServerCertificate {
         Write-Verbose "CSR is:`n$(Get-Content -Path ([System.IO.Path]::Combine($Path,"$FileBaseName.csr")) -Raw)"
     }
 }
+
+
+function Protect-RdpFile {
+    [CmdletBinding()]
+    param (
+        # File
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('FullName')]
+        [string[]]$FilePath,
+
+        # Cert thumbprint
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$Thumbprint
+    )
+
+    begin {
+        if (!$Thumbprint) {
+            $CodeSignCert = Get-ChildItem 'Cert:\CurrentUser\My\' | Where-Object {
+                ($PSItem.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.5.5.7.3.3') -and
+                (Test-Certificate $PSItem)
+            }
+            if (!$CodeSignCert) {
+                throw "No valid code signing certificate found."
+            }
+            $Thumbprint = $CodeSignCert.Thumbprint
+            Write-Verbose "Using certificate $($CodeSignCert.FriendlyName) ($Thumbprint)"
+        }
+    }
+
+    process {
+        foreach ($File in $FilePath) {
+            Write-Verbose "Signing file $File with certificate $Thumbprint"
+            rdpsign.exe /v /sha256 $Thumbprint $File
+        }
+    }
+
+    end {}
+
+}
