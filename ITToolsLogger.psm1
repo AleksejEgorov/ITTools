@@ -105,8 +105,11 @@ class ITToolsLogger {
                 if ($Type -eq 'File') {
                     $this._fileAndHost = $args[0]
                 }
-                else {
+                elseif ($args[0]) {
                     $this.Warning('Out to file and host is supported only for File type')
+                    $this._fileAndHost = $false
+                }
+                else {
                     $this._fileAndHost = $false
                 }
             }
