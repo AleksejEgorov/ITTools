@@ -813,6 +813,52 @@ function New-WebServerCertificate {
     }
 }
 
+function Get-CodeSigningCert {
+    [CmdletBinding()]
+    param (
+        # Cert thumbprint
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$Thumbprint
+    )
+
+    $CodeSignCert = $null
+
+
+    if (!$Thumbprint) {
+        $CodeSignCerts = Get-ChildItem 'Cert:\CurrentUser\My\' | Where-Object {
+            ($PSItem.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.5.5.7.3.3') -and
+            (Test-Certificate $PSItem)
+        }
+        if (!$CodeSignCerts) {
+            throw "No valid code signing certificate found."
+        }
+        elseif ($CodeSignCerts.Count -gt 1) {
+            [string]$MultipleWarning = "Multiple valid Code Signing certificates found.`n`n"
+            $i = 0
+            foreach ($Cert in $CodeSignCerts) {
+                $i++
+                $MultipleWarning += "$i. $($Cert.Subject) ($($Cert.Thumbprint))`n"
+            }
+            $MultipleWarning += "`nFirst will be used."
+            Write-Warning $MultipleWarning
+        }
+
+        $CodeSignCert = $CodeSignCerts[0]
+        Write-Verbose "Using certificate $($CodeSignCert.Subject) ($Thumbprint)"
+    }
+    else {
+        $CodeSignCert = Get-ChildItem 'Cert:\CurrentUser\My\' | Where-Object {
+            ($PSItem.Thumbprint -eq $Thumbprint) -and
+            ($PSItem.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.5.5.7.3.3')
+        }
+        if (!$CodeSignCert) {
+            throw "Code signing certificate with thumbprint $Thumbprint not found."
+        }
+    }
+    return $CodeSignCert
+}
 
 function Protect-RdpFile {
     [CmdletBinding()]
@@ -836,27 +882,7 @@ function Protect-RdpFile {
 
     begin {
         if (!$Thumbprint) {
-            $CodeSignCerts = Get-ChildItem 'Cert:\CurrentUser\My\' | Where-Object {
-                ($PSItem.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.5.5.7.3.3') -and
-                (Test-Certificate $PSItem)
-            }
-            if (!$CodeSignCerts) {
-                throw "No valid code signing certificate found."
-            }
-            elseif ($CodeSignCerts.Count -gt 1) {
-                [string]$MultipleWarning = "Multiple valid Code Signing certificates found.`n`n"
-                $i = 0
-                foreach ($Cert in $CodeSignCerts) {
-                    $i++
-                    $MultipleWarning += "$i. $($Cert.Subject) ($($Cert.Thumbprint))`n"
-                }
-                $MultipleWarning += "`nFirst will be used."
-                Write-Warning $MultipleWarning
-            }
-
-            $CodeSignCert = $CodeSignCerts[0]
-            $Thumbprint = $CodeSignCert.Thumbprint
-            Write-Verbose "Using certificate $($CodeSignCert.Subject) ($Thumbprint)"
+            $Thumbprint = (Get-CodeSigningCert).Thumbprint
         }
     }
 
@@ -868,5 +894,46 @@ function Protect-RdpFile {
     }
 
     end {}
+}
 
+function Protect-PSScript {
+    [CmdletBinding()]
+    param (
+        # File
+        [Parameter(
+            Mandatory = $true,
+            Position = 0,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true
+        )]
+        [Alias('FullName')]
+        [string[]]$FilePath,
+
+        # Cert thumbprint
+        [Parameter(
+            Mandatory = $false
+        )]
+        [string]$Thumbprint
+    )
+
+    begin {
+        $Params = @{}
+        if ($Thumbprint) {
+            $Params.Thumbprint = $Thumbprint
+        }
+        $CodeSignCert = Get-CodeSigningCert @Params
+    }
+
+    process {
+        foreach ($File in $FilePath) {
+            if ($File -notlike '*.ps1') {
+                Write-Warning "File $File is not powershell script. Skipping."
+                continue
+            }
+            Write-Verbose "Signing powershell script $File with certificate $Thumbprint"
+            Set-AuthenticodeSignature -FilePath $File -Certificate $CodeSignCert -TimestampServer "http://timestamp.digicert.com"
+        }
+    }
+
+    end {}
 }
